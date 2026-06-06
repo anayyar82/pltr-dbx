@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 .env
 config/environments.local.yaml
+config/deployment.local.yaml
 config/google_credentials.json
 config/google_token.json
 docs/.slides_upload_cache/

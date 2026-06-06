@@ -6,16 +6,33 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
 
-CATALOG = "users"
-SCHEMA = "ankur_nayyar"
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_genie_config() -> tuple[str, str, str, str]:
+    import yaml
+
+    path = ROOT / "config" / "genie_space.yaml"
+    if path.exists():
+        with path.open(encoding="utf-8") as f:
+            doc = yaml.safe_load(f) or {}
+        gs = doc.get("genie_space") or {}
+        return (
+            gs.get("catalog", "users"),
+            gs.get("schema", "ankur_nayyar"),
+            gs.get("title", "ATT SDP Service Delivery"),
+            gs.get("description", "ATT SDP Genie analytics"),
+        )
+    return "users", "ankur_nayyar", "ATT SDP Service Delivery", (
+        "Natural language analytics for ATT Service Delivery Platform."
+    )
+
+
+CATALOG, SCHEMA, TITLE, DESCRIPTION = _load_genie_config()
 WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "03560442e95cb440")
-PARENT_PATH = "/Users/ankur.nayyar@databricks.com/pltr-dbx"
-TITLE = "ATT SDP Service Delivery"
-DESCRIPTION = (
-    "Natural language analytics for ATT Service Delivery Platform — "
-    "incidents, orders, technicians, and market SLA performance."
-)
+PARENT_PATH = os.getenv("GENIE_PARENT_PATH", "/Users/pltr-dbx")
 
 
 def _table(name: str, description: str, columns: list[str] | None = None) -> dict:

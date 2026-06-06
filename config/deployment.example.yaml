@@ -1,0 +1,60 @@
+# ATT SDP — deployment configuration
+# Copy to config/deployment.yaml and edit, then run: ./install.sh all
+#
+#   cp config/deployment.example.yaml config/deployment.yaml
+
+deployment:
+  # Bundle target name (used with: databricks bundle deploy -t <name>)
+  target: my_sdp
+  # Databricks CLI profile (databricks auth login --profile <name>)
+  profile: my-workspace
+  # Bundle sync root in workspace (relative to user home)
+  bundle_root: ~/pltr-dbx
+
+workspace:
+  # Workspace URL (no trailing slash)
+  host: https://YOUR-WORKSPACE.cloud.databricks.com
+  # Workspace org ID — from any workspace URL ?o=XXXXXXXX
+  workspace_id: "0000000000000000"
+
+unity_catalog:
+  catalog: users
+  # Bronze, silver, and gold all use this schema in the demo
+  schema: your_schema_name
+
+sql:
+  # SQL warehouse ID for MV refresh, Genie, and App warehouse path
+  warehouse_id: YOUR_WAREHOUSE_ID
+
+app:
+  # Databricks App name (must be unique in workspace)
+  name: att-sdp-ops-demo
+  # Your Databricks user email — used for workspace app folder path
+  user_email: you@company.com
+  mlflow_experiment: /Shared/att-sdp-ops-console
+
+lakebase:
+  # Set enabled: false to skip Lakebase patches (Dispatch writeback won't work)
+  enabled: true
+  project_name: att-sdp-demo
+  branch: production
+  # Direct Postgres host (NOT pooler — Apps OAuth fails on pooler)
+  postgres_host: ep-XXXX.database.us-west-2.cloud.databricks.com
+  postgres_database: sdp_ops
+  postgres_schema: your_schema_name
+
+genie:
+  enabled: true
+  # Leave empty to create via: python3 scripts/create_att_sdp_genie_space.py
+  space_id: ""
+
+service_principal:
+  # App service principal client ID — fill after first app deploy, then re-run configure
+  # Find in: Apps → your app → Permissions → Service principal
+  app_client_id: ""
+
+install:
+  # Steps for `./install.sh all`
+  run_cleanup_before_bootstrap: false
+  run_semantic_setup: true
+  deploy_app: true

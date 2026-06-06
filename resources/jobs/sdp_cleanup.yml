@@ -12,6 +12,8 @@ resources:
             notebook_path: ${workspace.file_path}/notebooks/00_cleanup_att_sdp
             base_parameters:
               confirm_drop: "yes"
+              catalog: ${var.catalog}
+              schema: ${var.gold_schema}
       tags:
         client: att
         domain: sdp

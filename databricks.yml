@@ -29,6 +29,9 @@ variables:
   sql_warehouse_id:
     description: SQL warehouse for MV refresh (DBSQL-created MVs)
     default: 03560442e95cb440
+  app_service_principal_id:
+    description: App service principal client ID (job trigger permissions)
+    default: be33de06-36a1-467e-926b-902c55903267
 
 targets:
   e2_demo:
@@ -43,3 +46,4 @@ targets:
       silver_schema: ankur_nayyar
       gold_schema: ankur_nayyar
       sql_warehouse_id: 03560442e95cb440
+      app_service_principal_id: be33de06-36a1-467e-926b-902c55903267

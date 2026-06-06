@@ -11,6 +11,9 @@ resources:
         - task_key: bootstrap_bronze_seed
           notebook_task:
             notebook_path: ${workspace.file_path}/notebooks/01_bootstrap_bronze_seed
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.gold_schema}
         - task_key: run_sdp_dlt_full
           depends_on:
             - task_key: bootstrap_bronze_seed
@@ -22,20 +25,29 @@ resources:
             - task_key: run_sdp_dlt_full
           notebook_task:
             notebook_path: ${workspace.file_path}/notebooks/10_deploy_semantic_layer
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.gold_schema}
         - task_key: sync_lakebase
           depends_on:
             - task_key: deploy_semantic_layer
           notebook_task:
             notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.gold_schema}
         - task_key: show_kpis
           depends_on:
             - task_key: sync_lakebase
           notebook_task:
             notebook_path: ${workspace.file_path}/notebooks/05c_show_stream_kpis
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.gold_schema}
       tags:
         client: att
         domain: sdp
         workflow: semantic_setup
       permissions:
         - level: CAN_MANAGE_RUN
-          service_principal_name: be33de06-36a1-467e-926b-902c55903267
+          service_principal_name: ${var.app_service_principal_id}
