@@ -3,14 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ATT SDP — Service Delivery Console</title>
+  <title>ATT SDP — Service Delivery Operations Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0a1220; --surface: #121f33; --surface2: #1a2d47; --border: #2a4568;
-      --text: #f0f6fc; --text-secondary: #c8d9ea; --muted: #9eb8d4;
-      --accent: #33bdf5; --accent-dim: #0095da; --accent-hover: #5ccaff;
-      --navy: #0a2540; --p1: #ff6b6b; --p2: #ffb74d; --p3: #b0bec5;
-      --ok: #66bb6a; --warn: #ffa726; --sidebar: 240px;
+      --bg: #070d16; --surface: #0f1a2a; --surface2: #162236; --surface3: #1c2d45; --border: #243b57;
+      --text: #f4f8fc; --text-secondary: #b8cfe4; --muted: #7a9bb8;
+      --accent: #0095da; --accent-dim: #0077b3; --accent-hover: #33bdf5; --accent-glow: rgba(0,149,218,.15);
+      --navy: #061018; --p1: #ef5350; --p2: #ffb74d; --p3: #90a4ae;
+      --ok: #43a047; --warn: #fb8c00; --sidebar: 252px;
+      --radius: 10px; --radius-lg: 14px;
+      --shadow: 0 4px 24px rgba(0,0,0,.35);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -30,27 +35,47 @@
 
     /* Sidebar */
     .sidebar {
-      width: var(--sidebar); min-height: 100vh; background: var(--navy);
+      width: var(--sidebar); min-height: 100vh; background: linear-gradient(180deg, #081420 0%, var(--navy) 100%);
       border-right: 1px solid var(--border); display: flex; flex-direction: column;
       position: fixed; left: 0; top: 0; z-index: 100;
     }
-    .brand { padding: 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,.08); }
-    .brand-logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
-    .brand-logo span { color: var(--accent); }
-    .brand-sub { font-size: 0.72rem; color: #b8cfe4; margin-top: 0.25rem; line-height: 1.4; }
-    .nav { flex: 1; padding: 0.75rem 0.5rem; }
-    .nav-item {
-      display: flex; align-items: center; gap: 0.65rem; width: 100%;
-      padding: 0.65rem 0.85rem; margin-bottom: 0.25rem; border: none; border-radius: 8px;
-      background: transparent; color: #d0e4f5; font-size: 0.88rem;
-      font-weight: 500; cursor: pointer; text-align: left; transition: all .15s;
+    .brand { padding: 1.35rem 1.1rem 1.1rem; border-bottom: 1px solid rgba(255,255,255,.06); cursor: pointer; }
+    .brand:hover .brand-logo { color: var(--accent-hover); }
+    .brand-logo { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.03em; color: #fff; transition: color .15s; }
+    .brand-logo span { color: var(--accent-hover); }
+    .brand-sub { font-size: 0.68rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.45; letter-spacing: .02em; }
+    .nav { flex: 1; padding: 0.85rem 0.65rem; overflow-y: auto; }
+    .nav-section { margin-bottom: 1.1rem; }
+    .nav-section-label {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--muted); padding: 0 0.75rem 0.45rem; opacity: .85;
     }
-    .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
-    .nav-item.active { background: var(--accent); color: #fff; font-weight: 600; }
-    .nav-icon { font-size: 1.1rem; width: 1.4rem; text-align: center; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.7rem; width: 100%;
+      padding: 0.6rem 0.75rem; margin-bottom: 0.15rem; border: none; border-radius: var(--radius);
+      background: transparent; color: var(--text-secondary); font-size: 0.84rem;
+      font-weight: 500; cursor: pointer; text-align: left; transition: all .18s;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav-item.active {
+      background: linear-gradient(90deg, var(--accent-glow), rgba(0,149,218,.08));
+      color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 var(--accent-hover);
+    }
+    .nav-icon {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 700; color: var(--accent-hover); letter-spacing: -.02em;
+    }
+    .nav-item.active .nav-icon { background: var(--accent); border-color: var(--accent); color: #fff; }
     .sidebar-footer {
-      padding: 1rem; border-top: 1px solid rgba(255,255,255,.08);
-      font-size: 0.72rem; color: #9eb8d4; line-height: 1.5;
+      padding: 1rem 1.1rem; border-top: 1px solid rgba(255,255,255,.06);
+      font-size: 0.68rem; color: var(--muted); line-height: 1.55;
+    }
+    .sidebar-footer .env-tag {
+      display: inline-block; margin-top: 0.35rem; padding: 0.2rem 0.5rem;
+      background: rgba(67,160,71,.12); border: 1px solid rgba(67,160,71,.25);
+      border-radius: 4px; color: #81c784; font-size: 0.62rem; font-weight: 600;
     }
     .live-dot {
       display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -60,18 +85,108 @@
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 
     /* Main */
-    .main { margin-left: var(--sidebar); flex: 1; min-height: 100vh; }
+    .main { margin-left: var(--sidebar); flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
     .topbar {
-      padding: 1rem 1.75rem; border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.75rem; border-bottom: 1px solid var(--border);
       display: flex; justify-content: space-between; align-items: center;
-      background: var(--surface);
+      background: rgba(15,26,42,.95); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 50;
     }
-    .topbar h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
-    .topbar p { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem; }
-    .topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
-    .content { padding: 1.5rem 1.75rem 2.5rem; max-width: 1280px; }
-    .panel { display: none; }
+    .topbar-left { min-width: 0; }
+    .breadcrumbs {
+      display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
+      font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem;
+    }
+    .breadcrumbs a, .breadcrumbs button.bc-link {
+      background: none; border: none; padding: 0; color: var(--muted); cursor: pointer;
+      font: inherit; transition: color .15s;
+    }
+    .breadcrumbs a:hover, .breadcrumbs button.bc-link:hover { color: var(--accent-hover); }
+    .breadcrumbs .bc-sep { opacity: .45; user-select: none; }
+    .breadcrumbs .bc-current { color: var(--text-secondary); font-weight: 500; }
+    .topbar h2 { font-size: 1.2rem; font-weight: 700; color: var(--text); letter-spacing: -.02em; }
+    .topbar p { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+    .topbar-actions { display: flex; gap: 0.65rem; align-items: center; flex-shrink: 0; }
+    .health-pill {
+      display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.72rem;
+      padding: 0.35rem 0.7rem; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text-secondary);
+    }
+    .health-pill.ok { border-color: rgba(67,160,71,.35); background: rgba(67,160,71,.1); color: #a5d6a7; }
+    .health-pill.warn { border-color: rgba(251,140,0,.35); background: rgba(251,140,0,.1); color: #ffcc80; }
+    .health-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .health-pill.ok .health-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .health-pill.warn .health-dot { background: var(--warn); }
+    .content { padding: 1.5rem 1.75rem 2.5rem; max-width: 1320px; width: 100%; margin: 0 auto; flex: 1; }
+    .content.wide { max-width: 1520px; }
+    .panel { display: none; animation: fadeIn .25s ease; }
     .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* Home page */
+    .home-hero {
+      background: linear-gradient(135deg, #0a2540 0%, #0d3a5c 45%, #122a45 100%);
+      border: 1px solid rgba(51,189,245,.2); border-radius: var(--radius-lg);
+      padding: 2rem 2.25rem; margin-bottom: 1.5rem; position: relative; overflow: hidden;
+    }
+    .home-hero::before {
+      content: ''; position: absolute; top: -40%; right: -10%; width: 50%; height: 140%;
+      background: radial-gradient(circle, rgba(51,189,245,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .home-hero h1 { font-size: 1.65rem; font-weight: 800; letter-spacing: -.03em; color: #fff; margin-bottom: 0.5rem; }
+    .home-hero .hero-sub { font-size: 0.92rem; color: var(--text-secondary); max-width: 640px; line-height: 1.55; }
+    .home-hero-meta { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 1.25rem; font-size: 0.78rem; color: var(--muted); }
+    .home-hero-meta span strong { color: var(--accent-hover); font-weight: 600; }
+    .home-kpi-strip {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.85rem; margin-bottom: 1.75rem;
+    }
+    @media (max-width: 900px) { .home-kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+    .home-kpi {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1rem 1.1rem; text-align: center; transition: border-color .15s, transform .15s;
+    }
+    .home-kpi:hover { border-color: rgba(51,189,245,.35); transform: translateY(-1px); }
+    .home-kpi label { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .home-kpi strong { display: block; font-size: 1.65rem; font-weight: 700; margin-top: 0.3rem; color: var(--text); }
+    .home-kpi.p1 strong { color: var(--p1); }
+    .section-heading { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 0.85rem; }
+    .module-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem; margin-bottom: 1.75rem;
+    }
+    .module-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 1.25rem 1.35rem; cursor: pointer; text-align: left; font-family: inherit;
+      color: inherit; transition: all .2s; position: relative; overflow: hidden;
+      display: flex; flex-direction: column; gap: 0.5rem; min-height: 148px;
+    }
+    .module-card::after {
+      content: '→'; position: absolute; top: 1.25rem; right: 1.25rem;
+      font-size: 1.1rem; color: var(--muted); transition: transform .2s, color .2s;
+    }
+    .module-card:hover {
+      border-color: var(--accent); background: var(--surface2);
+      box-shadow: var(--shadow); transform: translateY(-2px);
+    }
+    .module-card:hover::after { transform: translateX(3px); color: var(--accent-hover); }
+    .module-card-icon {
+      width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 0.25rem;
+    }
+    .module-card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .module-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.45; flex: 1; }
+    .module-card .module-tag {
+      font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--accent-hover); opacity: .85;
+    }
+    .module-card.ic-blue .module-card-icon { background: rgba(0,149,218,.15); color: #33bdf5; border: 1px solid rgba(51,189,245,.25); }
+    .module-card.ic-red .module-card-icon { background: rgba(239,83,80,.12); color: #ef9a9a; border: 1px solid rgba(239,83,80,.25); }
+    .module-card.ic-green .module-card-icon { background: rgba(67,160,71,.12); color: #a5d6a7; border: 1px solid rgba(67,160,71,.25); }
+    .module-card.ic-purple .module-card-icon { background: rgba(149,117,205,.12); color: #ce93d8; border: 1px solid rgba(149,117,205,.25); }
+    .module-card.ic-amber .module-card-icon { background: rgba(251,140,0,.12); color: #ffcc80; border: 1px solid rgba(251,140,0,.25); }
+    .module-card.ic-teal .module-card-icon { background: rgba(38,166,154,.12); color: #80cbc4; border: 1px solid rgba(38,166,154,.25); }
+    .demo-flow { margin-bottom: 0; }
 
     /* Cards & KPIs */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
@@ -93,10 +208,12 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
     .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
     @media (max-width: 960px) {
-      .sidebar { width: 64px; }
-      .sidebar .brand-sub, .sidebar .nav-item span, .sidebar-footer { display: none; }
-      .main { margin-left: 64px; }
+      .sidebar { width: 68px; --sidebar: 68px; }
+      .sidebar .brand-sub, .sidebar .nav-item > span:not(.nav-icon), .sidebar-footer, .nav-section-label { display: none; }
+      .main { margin-left: 68px; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .topbar { padding: 0.75rem 1rem; }
+      .content { padding: 1rem; }
     }
 
     .card {
@@ -372,62 +489,192 @@
       font-size: 0.88rem; box-shadow: 0 8px 24px rgba(0,0,0,.4);
     }
     .loading-shimmer { color: var(--muted); font-style: italic; }
+
+    /* Analytics dashboard (Chart.js) */
+    .analytics-banner {
+      background: linear-gradient(135deg, #122a45 0%, #1a3d5c 100%);
+      border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+    }
+    .analytics-banner h3 { font-size: 0.95rem; color: #fff; margin: 0; }
+    .analytics-banner p { font-size: 0.78rem; color: var(--text-secondary); margin: 0.25rem 0 0; }
+    .analytics-badge {
+      font-size: 0.72rem; padding: 0.35rem 0.65rem; border-radius: 6px;
+      background: rgba(51,189,245,.15); color: var(--accent-hover); border: 1px solid rgba(51,189,245,.3);
+    }
+    .analytics-kpi-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.85rem; margin-bottom: 1.25rem;
+    }
+    .analytics-kpi {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem; text-align: center;
+    }
+    .analytics-kpi label { display: block; font-size: 0.68rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+    .analytics-kpi strong { display: block; font-size: 1.75rem; font-weight: 700; margin-top: 0.35rem; color: var(--text); }
+    .analytics-kpi.p1 strong { color: var(--p1); }
+    .analytics-kpi.warn strong { color: var(--warn); }
+    .analytics-kpi.ok strong { color: var(--ok); }
+    .analytics-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.15rem; margin-bottom: 1.15rem;
+    }
+    @media (max-width: 1100px) { .analytics-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 720px) { .analytics-grid { grid-template-columns: 1fr; } }
+    .viz-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem 1.1rem 0.85rem; min-height: 320px; display: flex; flex-direction: column;
+    }
+    .viz-card.wide { grid-column: span 2; }
+    .viz-card.full { grid-column: 1 / -1; }
+    @media (max-width: 1100px) { .viz-card.wide { grid-column: span 1; } }
+    .viz-head { margin-bottom: 0.65rem; }
+    .viz-title { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+    .viz-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+    .viz-canvas { flex: 1; position: relative; min-height: 240px; max-height: 280px; }
+    .viz-canvas canvas { width: 100% !important; height: 100% !important; }
+    .heatmap-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .heatmap-table th { background: var(--surface2); color: var(--text-secondary); padding: 0.5rem; text-align: center; font-size: 0.68rem; }
+    .heatmap-table td { padding: 0.55rem; text-align: center; font-weight: 600; border: 1px solid var(--border); }
+    .heatmap-table td.row-label { text-align: left; font-weight: 500; color: var(--text-secondary); background: var(--surface2); }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <aside class="sidebar">
-    <div class="brand">
+    <div class="brand" id="brand-home" title="Return to Home">
       <div class="brand-logo">ATT <span>SDP</span></div>
-      <div class="brand-sub">Service Delivery Platform<br>Foundry → Databricks</div>
+      <div class="brand-sub">Service Delivery Operations Center<br>Foundry → Databricks</div>
     </div>
     <nav class="nav">
-      <button class="nav-item {{ 'active' if active_tab == 'dashboard' else '' }}" data-tab="dashboard">
-        <span class="nav-icon">📊</span><span>Dashboard</span>
-      </button>
-      <button class="nav-item {{ 'active' if active_tab == 'dispatch' else '' }}" data-tab="dispatch">
-        <span class="nav-icon">🚨</span><span>Dispatch</span>
-      </button>
-      <button class="nav-item {{ 'active' if active_tab == 'agent' else '' }}" data-tab="agent">
-        <span class="nav-icon">🤖</span><span>Agent Triage</span>
-      </button>
-      <button class="nav-item {{ 'active' if active_tab == 'live' else '' }}" data-tab="live">
-        <span class="nav-icon">⚡</span><span>Live Demo</span>
-      </button>
-      <button class="nav-item {{ 'active' if active_tab == 'genie' else '' }}" data-tab="genie">
-        <span class="nav-icon">✨</span><span>Genie</span>
-      </button>
+      <div class="nav-section">
+        <div class="nav-section-label">Overview</div>
+        <button class="nav-item {{ 'active' if active_tab == 'home' else '' }}" data-tab="home">
+          <span class="nav-icon">HM</span><span>Home</span>
+        </button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Operations</div>
+        <button class="nav-item {{ 'active' if active_tab == 'dashboard' else '' }}" data-tab="dashboard">
+          <span class="nav-icon">DB</span><span>Dashboard</span>
+        </button>
+        <button class="nav-item {{ 'active' if active_tab == 'dispatch' else '' }}" data-tab="dispatch">
+          <span class="nav-icon">DS</span><span>Dispatch</span>
+        </button>
+        <button class="nav-item {{ 'active' if active_tab == 'agent' else '' }}" data-tab="agent">
+          <span class="nav-icon">AI</span><span>Agent Triage</span>
+        </button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Analytics</div>
+        <button class="nav-item {{ 'active' if active_tab == 'analytics' else '' }}" data-tab="analytics">
+          <span class="nav-icon">CH</span><span>Charts</span>
+        </button>
+        <button class="nav-item {{ 'active' if active_tab == 'genie' else '' }}" data-tab="genie">
+          <span class="nav-icon">GN</span><span>Genie</span>
+        </button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Platform</div>
+        <button class="nav-item {{ 'active' if active_tab == 'live' else '' }}" data-tab="live">
+          <span class="nav-icon">LD</span><span>Live Demo</span>
+        </button>
+      </div>
     </nav>
     <div class="sidebar-footer">
-      <span class="live-dot"></span>Live · {{ catalog }}.{{ schema }}<br>
-      Lakebase: {{ lakebase_project }}
+      <span class="live-dot"></span>{{ catalog }}.{{ schema }}<br>
+      Lakebase · {{ lakebase_project }}
+      <div class="env-tag">LIVE DEMO</div>
     </div>
   </aside>
 
   <div class="main">
     <header class="topbar">
-      <div>
-        <h2 id="page-title">Executive Dashboard</h2>
-        <p id="page-sub">Network incident & service fulfillment operations</p>
+      <div class="topbar-left">
+        <nav class="breadcrumbs" id="breadcrumbs" aria-label="Breadcrumb"></nav>
+        <h2 id="page-title">Home</h2>
+        <p id="page-sub">Service Delivery Operations Center</p>
       </div>
       <div class="topbar-actions">
-        <span id="last-refreshed" style="font-size:0.78rem;color:var(--muted)"></span>
+        <span class="health-pill" id="health-pill"><span class="health-dot"></span><span id="health-text">Checking…</span></span>
+        <span id="last-refreshed" style="font-size:0.72rem;color:var(--muted)"></span>
         <button class="btn btn-primary" id="global-refresh">↻ Refresh</button>
       </div>
     </header>
 
     <div class="content">
-      <!-- DASHBOARD -->
-      <section id="panel-dashboard" class="panel {{ 'active' if active_tab == 'dashboard' else '' }}">
-        <div class="demo-guide">
-          <h3>🎯 Demo playbook — 4-minute flow</h3>
-          <div class="demo-steps">
-            <div class="demo-step" data-goto="dashboard"><strong>1 · Overview</strong>Review KPIs and market health on this dashboard.</div>
-            <div class="demo-step" data-goto="live"><strong>2 · Ingest</strong>Live Demo → Write + Refresh to append streaming incidents (~3–5 min).</div>
-            <div class="demo-step" data-goto="dispatch"><strong>3 · Operate</strong>Dispatch → update incident status (Lakebase writeback).</div>
-            <div class="demo-step" data-goto="agent"><strong>4 · Agent</strong>Agent Triage → search → recommend → approve dispatch.</div>
-            <div class="demo-step" data-goto="genie"><strong>5 · Analyze</strong>Genie → ask "How many P1 incidents in Dallas?"</div>
+      <!-- HOME -->
+      <section id="panel-home" class="panel {{ 'active' if active_tab == 'home' else '' }}">
+        <div class="home-hero">
+          <h1>Service Delivery Operations Center</h1>
+          <p class="hero-sub">Unified platform for network incident management, field dispatch, AI-assisted triage, and governed analytics — migrated from Palantir Foundry to Databricks.</p>
+          <div class="home-hero-meta">
+            <span>Catalog · <strong>{{ catalog }}.{{ schema }}</strong></span>
+            <span>Lakebase · <strong>{{ lakebase_project }}</strong></span>
+            <span>Platform · <strong>Databricks Apps + Genie + DLT</strong></span>
           </div>
         </div>
+        <div class="home-kpi-strip" id="home-kpis">
+          <div class="home-kpi"><label>Open incidents</label><strong id="hk-open">—</strong></div>
+          <div class="home-kpi p1"><label>P1 critical</label><strong id="hk-p1">—</strong></div>
+          <div class="home-kpi"><label>Provisioning</label><strong id="hk-orders">—</strong></div>
+          <div class="home-kpi"><label>Techs available</label><strong id="hk-techs">—</strong></div>
+          <div class="home-kpi"><label>Stream feed</label><strong id="hk-stream">—</strong></div>
+        </div>
+        <div class="section-heading">Applications</div>
+        <div class="module-grid">
+          <button type="button" class="module-card ic-blue" data-goto="dashboard">
+            <span class="module-tag">Operations</span>
+            <div class="module-card-icon">DB</div>
+            <h3>Executive Dashboard</h3>
+            <p>Real-time KPIs, market breakdown, recent incidents, and technician availability.</p>
+          </button>
+          <button type="button" class="module-card ic-teal" data-goto="analytics">
+            <span class="module-tag">Analytics</span>
+            <div class="module-card-icon">CH</div>
+            <h3>Charts &amp; Visualizations</h3>
+            <p>AI/BI-style dashboard with Chart.js — severity, trends, MTTR, heatmaps, and SLA views.</p>
+          </button>
+          <button type="button" class="module-card ic-red" data-goto="dispatch">
+            <span class="module-tag">Operations</span>
+            <div class="module-card-icon">DS</div>
+            <h3>Incident Dispatch</h3>
+            <p>Operational dispatch board with Lakebase writeback and latency comparison demo.</p>
+          </button>
+          <button type="button" class="module-card ic-purple" data-goto="agent">
+            <span class="module-tag">Operations</span>
+            <div class="module-card-icon">AI</div>
+            <h3>Agent Triage</h3>
+            <p>AI search, technician recommendation, and human-approved dispatch writeback.</p>
+          </button>
+          <button type="button" class="module-card ic-green" data-goto="genie">
+            <span class="module-tag">Analytics</span>
+            <div class="module-card-icon">GN</div>
+            <h3>Genie Analytics</h3>
+            <p>Natural language questions on governed semantic views with auto-generated charts.</p>
+          </button>
+          <button type="button" class="module-card ic-amber" data-goto="live">
+            <span class="module-tag">Platform</span>
+            <div class="module-card-icon">LD</div>
+            <h3>Live Pipeline Demo</h3>
+            <p>Trigger end-to-end data flow — Bronze → DLT → Semantic → Lakebase → App.</p>
+          </button>
+        </div>
+        <div class="section-heading">Demo playbook</div>
+        <div class="demo-guide demo-flow">
+          <h3>Recommended 5-minute customer flow</h3>
+          <div class="demo-steps">
+            <div class="demo-step" data-goto="dashboard"><strong>1 · Overview</strong>Executive Dashboard — review KPIs and market health.</div>
+            <div class="demo-step" data-goto="analytics"><strong>2 · Visualize</strong>Charts — show AI/BI dashboard with live semantic data.</div>
+            <div class="demo-step" data-goto="live"><strong>3 · Ingest</strong>Live Demo — append streaming incidents (~3–5 min).</div>
+            <div class="demo-step" data-goto="dispatch"><strong>4 · Operate</strong>Dispatch — update status via Lakebase writeback.</div>
+            <div class="demo-step" data-goto="agent"><strong>5 · Automate</strong>Agent Triage — search, recommend, approve dispatch.</div>
+            <div class="demo-step" data-goto="genie"><strong>6 · Analyze</strong>Genie — ask &ldquo;How many P1 incidents in Dallas?&rdquo;</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DASHBOARD -->
+      <section id="panel-dashboard" class="panel {{ 'active' if active_tab == 'dashboard' else '' }}">
         <div class="kpi-grid" id="dash-kpis">
           <div class="kpi-card"><div class="kpi-label">Open incidents</div><div class="kpi-value" id="dk-open">—</div></div>
           <div class="kpi-card alert"><div class="kpi-label">P1 critical</div><div class="kpi-value" id="dk-p1">—</div></div>
@@ -461,6 +708,66 @@
         </div>
       </section>
 
+      <!-- ANALYTICS VISUALIZATIONS -->
+      <section id="panel-analytics" class="panel {{ 'active' if active_tab == 'analytics' else '' }}">
+        <div class="analytics-banner">
+          <div>
+            <h3>Service Delivery Analytics</h3>
+            <p>Live charts from governed semantic views · {{ catalog }}.{{ schema }}</p>
+          </div>
+          <span class="analytics-badge" id="analytics-source">Loading data source…</span>
+        </div>
+        <div class="analytics-kpi-row" id="analytics-kpis">
+          <div class="analytics-kpi"><label>Open incidents</label><strong id="ak-open">—</strong></div>
+          <div class="analytics-kpi p1"><label>P1 critical</label><strong id="ak-p1">—</strong></div>
+          <div class="analytics-kpi warn"><label>Provisioning</label><strong id="ak-orders">—</strong></div>
+          <div class="analytics-kpi ok"><label>Techs available</label><strong id="ak-techs">—</strong></div>
+          <div class="analytics-kpi"><label>Stream incidents</label><strong id="ak-stream">—</strong></div>
+        </div>
+        <div class="analytics-grid">
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Open incidents by severity</div><div class="viz-sub">Donut · operational backlog</div></div>
+            <div class="viz-canvas"><canvas id="chart-severity"></canvas></div>
+          </div>
+          <div class="viz-card wide">
+            <div class="viz-head"><div class="viz-title">Open incidents by market</div><div class="viz-sub">Bar · total open vs P1 overlay</div></div>
+            <div class="viz-canvas"><canvas id="chart-markets"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Incident status mix</div><div class="viz-sub">Pie · includes writeback overlay</div></div>
+            <div class="viz-canvas"><canvas id="chart-status"></canvas></div>
+          </div>
+          <div class="viz-card wide">
+            <div class="viz-head"><div class="viz-title">Market × severity heatmap</div><div class="viz-sub">From metric_open_incidents_by_market</div></div>
+            <div id="chart-heatmap" style="padding-bottom:0.75rem;overflow-x:auto"><div class="loading-shimmer">Loading…</div></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Service type mix</div><div class="viz-sub">Open incidents by technology</div></div>
+            <div class="viz-canvas"><canvas id="chart-service"></canvas></div>
+          </div>
+          <div class="viz-card wide">
+            <div class="viz-head"><div class="viz-title">Incident volume trend</div><div class="viz-sub">Line · last 14 days</div></div>
+            <div class="viz-canvas"><canvas id="chart-trend"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Avg MTTR by market</div><div class="viz-sub">Bar · hours to resolve (30d)</div></div>
+            <div class="viz-canvas"><canvas id="chart-mttr"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Technician capacity</div><div class="viz-sub">Stacked · available vs busy</div></div>
+            <div class="viz-canvas"><canvas id="chart-tech"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Orders by status</div><div class="viz-sub">Doughnut · fulfillment pipeline</div></div>
+            <div class="viz-canvas"><canvas id="chart-order-status"></canvas></div>
+          </div>
+          <div class="viz-card">
+            <div class="viz-head"><div class="viz-title">Orders provisioning</div><div class="viz-sub">Bar · by market</div></div>
+            <div class="viz-canvas"><canvas id="chart-orders"></canvas></div>
+          </div>
+        </div>
+      </section>
+
       <!-- DISPATCH -->
       <section id="panel-dispatch" class="panel {{ 'active' if active_tab == 'dispatch' else '' }}">
         <div class="kpi-grid" style="margin-bottom:1rem">
@@ -475,7 +782,7 @@
         </div>
 
         <div class="path-panel">
-          <div class="card-title">⚡ Data path — Lakebase vs SQL Warehouse latency</div>
+          <div class="card-title">Data path — Lakebase vs SQL Warehouse latency</div>
           <div class="path-toggles">
             <label>Read ops overlay
               <div class="seg-control" id="read-path-toggle">
@@ -527,7 +834,7 @@
       <!-- AGENT TRIAGE -->
       <section id="panel-agent" class="panel {{ 'active' if active_tab == 'agent' else '' }}">
         <div class="demo-guide" style="margin-bottom:1.25rem">
-          <h3>🤖 Agent Triage — ex-Foundry AIP / AgentBricks</h3>
+          <h3>Agent Triage — Foundry AIP / AgentBricks</h3>
           <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;margin:0">
             Agent searches UC gold tables, recommends technicians, then <strong>requests human approval</strong>
             before writing to <code>bridge_incident_technician</code> + ops writeback. All tool calls logged to
@@ -567,7 +874,7 @@
       <!-- LIVE DEMO -->
       <section id="panel-live" class="panel {{ 'active' if active_tab == 'live' else '' }}">
         <div class="demo-guide" style="margin-bottom:1.25rem">
-          <h3>⚡ Live pipeline — Bronze → DLT → Semantic → Lakebase → App</h3>
+          <h3>Live pipeline — Bronze → DLT → Semantic → Lakebase → App</h3>
           <div class="demo-steps">
             <div class="demo-step"><strong>1 · Pick scenario</strong>Select synthetic NOC event below.</div>
             <div class="demo-step"><strong>2 · Run job</strong>Triggers Databricks workflow (~3–5 min).</div>
@@ -654,7 +961,7 @@
             </div>
           </div>
           <div class="genie-dash-col">
-            <h3>📊 Live dashboard</h3>
+            <h3>Live dashboard</h3>
             <div id="genie-dashboard"><div class="empty">Ask a question to generate charts &amp; KPIs</div></div>
             <div class="mlflow-badge" id="mlflow-badge">
               MLflow tracking: <span id="mlflow-status">loading…</span>
@@ -668,12 +975,75 @@
   <div class="toast" id="toast"></div>
   <script>
     const TITLES = {
-      dashboard: ['Executive Dashboard', 'Network incident & service fulfillment operations'],
-      dispatch: ['Incident Dispatch', 'Lakebase vs Warehouse latency · Toggle read/write path · {{ catalog }}.{{ schema }}'],
-      agent: ['Agent Triage', 'AgentBricks pattern · Search → Recommend → Approve → Write'],
-      live: ['Live Demo', 'Synthetic data → Semantic layer → Lakebase → App'],
-      genie: ['Genie Analytics', 'Auto dashboards · Charts · KPIs · MLflow tracked'],
+      home: ['Home', 'Service Delivery Operations Center'],
+      dashboard: ['Executive Dashboard', 'Real-time KPIs and operational health'],
+      analytics: ['Charts & Visualizations', 'AI/BI dashboard · Semantic KPI views · {{ catalog }}.{{ schema }}'],
+      dispatch: ['Incident Dispatch', 'Lakebase writeback · Read/write path latency demo'],
+      agent: ['Agent Triage', 'Search → Recommend → Approve → Write · AgentBricks pattern'],
+      live: ['Live Pipeline Demo', 'Bronze → DLT → Semantic → Lakebase → App'],
+      genie: ['Genie Analytics', 'Natural language · Auto charts · MLflow tracked'],
     };
+
+    const PAGE_CRUMBS = {
+      home: [{ label: 'Home', tab: 'home' }],
+      dashboard: [{ label: 'Home', tab: 'home' }, { label: 'Operations', tab: null }, { label: 'Dashboard', tab: 'dashboard' }],
+      dispatch: [{ label: 'Home', tab: 'home' }, { label: 'Operations', tab: null }, { label: 'Dispatch', tab: 'dispatch' }],
+      agent: [{ label: 'Home', tab: 'home' }, { label: 'Operations', tab: null }, { label: 'Agent Triage', tab: 'agent' }],
+      analytics: [{ label: 'Home', tab: 'home' }, { label: 'Analytics', tab: null }, { label: 'Charts', tab: 'analytics' }],
+      genie: [{ label: 'Home', tab: 'home' }, { label: 'Analytics', tab: null }, { label: 'Genie', tab: 'genie' }],
+      live: [{ label: 'Home', tab: 'home' }, { label: 'Platform', tab: null }, { label: 'Live Demo', tab: 'live' }],
+    };
+
+    function pageUrl(name) {
+      return name === 'home' ? '/' : '/' + name;
+    }
+
+    function renderBreadcrumbs(name) {
+      const el = document.getElementById('breadcrumbs');
+      if (!el) return;
+      const crumbs = PAGE_CRUMBS[name] || PAGE_CRUMBS.home;
+      el.innerHTML = crumbs.map((c, i) => {
+        const isLast = i === crumbs.length - 1;
+        const sep = i > 0 ? '<span class="bc-sep">/</span>' : '';
+        if (isLast) return sep + `<span class="bc-current">${c.label}</span>`;
+        if (c.tab) return sep + `<button type="button" class="bc-link" data-bc-tab="${c.tab}">${c.label}</button>`;
+        return sep + `<span class="bc-current" style="opacity:.55">${c.label}</span>`;
+      }).join('');
+      el.querySelectorAll('[data-bc-tab]').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.bcTab));
+      });
+    }
+
+    async function loadHealthPill() {
+      const pill = document.getElementById('health-pill');
+      const text = document.getElementById('health-text');
+      if (!pill || !text) return;
+      try {
+        const h = await (await fetch('/health')).json();
+        const ok = h.sql_ok && (h.lakebase_ok || !h.lakebase_host);
+        pill.className = 'health-pill ' + (ok ? 'ok' : 'warn');
+        text.textContent = ok
+          ? `${h.incident_count ?? 0} incidents · ${h.ops_read_path || 'connected'}`
+          : (h.sql_error || h.lakebase_error || 'Degraded').slice(0, 48);
+      } catch (_) {
+        pill.className = 'health-pill warn';
+        text.textContent = 'Health check failed';
+      }
+    }
+
+    async function loadHome() {
+      try {
+        const d = await (await fetch('/api/dashboard')).json();
+        const k = d.kpis || {};
+        document.getElementById('hk-open').textContent = k.total_open_incidents ?? '0';
+        document.getElementById('hk-p1').textContent = k.open_p1_incidents ?? '0';
+        document.getElementById('hk-orders').textContent = k.orders_in_provisioning ?? '0';
+        document.getElementById('hk-techs').textContent = k.available_technicians ?? '0';
+        document.getElementById('hk-stream').textContent = k.stream_incidents ?? '0';
+        document.getElementById('last-refreshed').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (_) { /* home KPIs optional */ }
+      loadHealthPill();
+    }
 
     let activeTab = '{{ active_tab }}';
     let genieConversationId = null;
@@ -692,6 +1062,216 @@
     let lastReadMs = null;
     let lastWriteMs = null;
     let lastBoardMs = null;
+
+    let lastBoardMs = null;
+    let analyticsCharts = {};
+
+    const CHART_COLORS = {
+      accent: '#33bdf5', accent2: '#0095da', p1: '#ff6b6b', p2: '#ffb74d', p3: '#b0bec5', p4: '#78909c',
+      ok: '#66bb6a', warn: '#ffa726', purple: '#9575cd', teal: '#4dd0e1', pink: '#f06292',
+      palette: ['#33bdf5', '#ffb74d', '#66bb6a', '#ff6b6b', '#9575cd', '#4dd0e1', '#f06292', '#81c784'],
+    };
+
+    function destroyAnalyticsCharts() {
+      Object.values(analyticsCharts).forEach(c => { try { c.destroy(); } catch (_) {} });
+      analyticsCharts = {};
+    }
+
+    function chartDefaults() {
+      Chart.defaults.color = '#9eb8d4';
+      Chart.defaults.borderColor = 'rgba(42, 69, 104, 0.6)';
+      Chart.defaults.font.family = '"Inter", "Segoe UI", system-ui, sans-serif';
+    }
+
+    function makeChart(id, config) {
+      const canvas = document.getElementById(id);
+      if (!canvas || typeof Chart === 'undefined') return null;
+      if (analyticsCharts[id]) {
+        analyticsCharts[id].destroy();
+      }
+      analyticsCharts[id] = new Chart(canvas, config);
+      return analyticsCharts[id];
+    }
+
+    function renderHeatmap(el, heatmap) {
+      if (!heatmap?.markets?.length) {
+        el.innerHTML = '<div class="empty">No market data</div>';
+        return;
+      }
+      const sevs = heatmap.severities || [];
+      const matrix = heatmap.matrix || [];
+      const flat = matrix.flat().filter(v => v > 0);
+      const max = Math.max(...flat, 1);
+      const sevColor = { P1: '#ff6b6b', P2: '#ffb74d', P3: '#b0bec5', P4: '#78909c' };
+      let html = '<table class="heatmap-table"><thead><tr><th>Market</th>';
+      sevs.forEach(s => { html += `<th>${s}</th>`; });
+      html += '<th>Total</th></tr></thead><tbody>';
+      heatmap.markets.forEach((m, ri) => {
+        const row = matrix[ri] || [];
+        const total = row.reduce((a, b) => a + (b || 0), 0);
+        html += `<tr><td class="row-label">${m}</td>`;
+        sevs.forEach((s, ci) => {
+          const v = row[ci] ?? 0;
+          const alpha = v ? 0.15 + (v / max) * 0.75 : 0.05;
+          const bg = sevColor[s] || CHART_COLORS.accent;
+          const style = v ? `background:rgba(${bg === '#ff6b6b' ? '255,107,107' : bg === '#ffb74d' ? '255,183,77' : '176,190,197'},${alpha});color:${v ? '#fff' : 'var(--muted)'}` : 'color:var(--muted)';
+          html += `<td style="${style}">${v || '—'}</td>`;
+        });
+        html += `<td style="font-weight:700;color:var(--accent)">${total}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    }
+
+    async function loadAnalytics() {
+      try {
+        chartDefaults();
+        const d = await (await fetch('/api/analytics')).json();
+        const k = d.kpis || {};
+        document.getElementById('ak-open').textContent = k.total_open_incidents ?? '0';
+        document.getElementById('ak-p1').textContent = k.open_p1_incidents ?? '0';
+        document.getElementById('ak-orders').textContent = k.orders_in_provisioning ?? '0';
+        document.getElementById('ak-techs').textContent = k.available_technicians ?? '0';
+        document.getElementById('ak-stream').textContent = k.stream_incidents ?? '0';
+        const src = document.getElementById('analytics-source');
+        if (src) {
+          src.textContent = `${d.catalog}.${d.schema} · ${d.ops_read_path || 'warehouse'} · ${new Date(d.refreshed_at || Date.now()).toLocaleTimeString()}`;
+        }
+
+        destroyAnalyticsCharts();
+
+        const sev = d.severity_donut || {};
+        makeChart('chart-severity', {
+          type: 'doughnut',
+          data: {
+            labels: sev.labels || [],
+            datasets: [{ data: sev.values || [], backgroundColor: [CHART_COLORS.p1, CHART_COLORS.p2, CHART_COLORS.p3, CHART_COLORS.p4], borderWidth: 0 }],
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } } },
+        });
+
+        const mkt = d.market_bar || {};
+        makeChart('chart-markets', {
+          type: 'bar',
+          data: {
+            labels: mkt.labels || [],
+            datasets: [
+              { label: 'Open', data: mkt.open || [], backgroundColor: 'rgba(51,189,245,0.75)', borderRadius: 4 },
+              { label: 'P1', data: mkt.p1 || [], backgroundColor: 'rgba(255,107,107,0.85)', borderRadius: 4 },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 10 } } },
+            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          },
+        });
+
+        const st = d.status_pie || {};
+        makeChart('chart-status', {
+          type: 'pie',
+          data: {
+            labels: st.labels || [],
+            datasets: [{ data: st.values || [], backgroundColor: CHART_COLORS.palette, borderWidth: 0 }],
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } } },
+        });
+
+        const svc = d.service_mix || {};
+        makeChart('chart-service', {
+          type: 'polarArea',
+          data: {
+            labels: svc.labels || [],
+            datasets: [{ data: svc.values || [], backgroundColor: CHART_COLORS.palette.map(c => c + 'cc'), borderWidth: 0 }],
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } } },
+        });
+
+        const tr = d.incident_trend || {};
+        makeChart('chart-trend', {
+          type: 'line',
+          data: {
+            labels: tr.labels || [],
+            datasets: [{
+              label: 'Incidents opened',
+              data: tr.values || [],
+              borderColor: CHART_COLORS.accent,
+              backgroundColor: 'rgba(51,189,245,0.12)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 4,
+              pointBackgroundColor: CHART_COLORS.accent,
+            }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          },
+        });
+
+        const mttr = d.mttr_bar || {};
+        makeChart('chart-mttr', {
+          type: 'bar',
+          data: {
+            labels: mttr.labels || [],
+            datasets: [{ label: 'Avg hours', data: mttr.values || [], backgroundColor: 'rgba(255,167,38,0.8)', borderRadius: 4 }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true }, y: { grid: { display: false } } },
+          },
+        });
+
+        const tech = d.tech_stacked || {};
+        makeChart('chart-tech', {
+          type: 'bar',
+          data: {
+            labels: tech.labels || [],
+            datasets: [
+              { label: 'Available', data: tech.available || [], backgroundColor: 'rgba(102,187,106,0.85)', borderRadius: 4 },
+              { label: 'Busy', data: tech.busy || [], backgroundColor: 'rgba(255,183,77,0.75)', borderRadius: 4 },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 10 } } },
+            scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } },
+          },
+        });
+
+        const os = d.order_status || {};
+        makeChart('chart-order-status', {
+          type: 'doughnut',
+          data: {
+            labels: os.labels || [],
+            datasets: [{ data: os.values || [], backgroundColor: CHART_COLORS.palette, borderWidth: 0 }],
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } } },
+        });
+
+        const ord = d.orders_bar || {};
+        makeChart('chart-orders', {
+          type: 'bar',
+          data: {
+            labels: ord.labels || [],
+            datasets: [{ label: 'Orders', data: ord.values || [], backgroundColor: 'rgba(149,117,205,0.85)', borderRadius: 4 }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          },
+        });
+
+        renderHeatmap(document.getElementById('chart-heatmap'), d.heatmap);
+        document.getElementById('last-refreshed').textContent = 'Analytics updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        showToast('Analytics load failed');
+        console.error(e);
+      }
+    }
 
     function pathLabel(p) {
       return p === 'warehouse' ? 'SQL Warehouse' : 'Lakebase Postgres';
@@ -920,24 +1500,38 @@
       }).join('');
     }
 
-    function switchTab(name) {
+    function switchTab(name, opts = {}) {
+      const push = opts.push !== false;
       activeTab = name;
       document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === name));
       document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
-      const [title, sub] = TITLES[name] || TITLES.dashboard;
+      const [title, sub] = TITLES[name] || TITLES.home;
       document.getElementById('page-title').textContent = title;
       document.getElementById('page-sub').textContent = sub;
-      history.replaceState(null, '', name === 'dashboard' ? '/' : '/' + name);
+      renderBreadcrumbs(name);
+      if (push) history.pushState({ tab: name }, '', pageUrl(name));
+      document.querySelector('.content')?.classList.toggle('wide', name === 'analytics');
       if (name === 'live') { loadLiveScenarios(); startLivePolling(); }
       else stopLivePolling();
+      if (name === 'home') loadHome();
       if (name === 'dashboard') loadDashboard();
+      if (name === 'analytics') loadAnalytics();
       if (name === 'dispatch') { loadKpis(); loadIncidents(); loadLatencyHistory(); }
       if (name === 'genie') loadMlflowStatus();
       if (name === 'agent') loadAgentAudit();
     }
 
+    document.getElementById('brand-home')?.addEventListener('click', () => switchTab('home'));
     document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => switchTab(n.dataset.tab)));
-    document.querySelectorAll('.demo-step[data-goto]').forEach(s => s.addEventListener('click', () => switchTab(s.dataset.goto)));
+    document.querySelectorAll('.demo-step[data-goto], .module-card[data-goto]').forEach(s => {
+      s.addEventListener('click', () => switchTab(s.dataset.goto));
+    });
+
+    window.addEventListener('popstate', () => {
+      const seg = location.pathname.replace(/^\//, '').split('/')[0];
+      const name = seg && TITLES[seg] ? seg : 'home';
+      switchTab(name, { push: false });
+    });
 
     async function loadDashboard() {
       try {
@@ -1245,10 +1839,13 @@
     function stopLiveFastPoll() { if (liveFastPollTimer) clearInterval(liveFastPollTimer); liveFastPollTimer = null; }
 
     document.getElementById('global-refresh').addEventListener('click', () => {
-      if (activeTab === 'dashboard') loadDashboard();
+      loadHealthPill();
+      if (activeTab === 'home') loadHome();
+      else if (activeTab === 'dashboard') loadDashboard();
+      else if (activeTab === 'analytics') loadAnalytics();
       else if (activeTab === 'dispatch') { loadKpis(); loadIncidents(); }
       else if (activeTab === 'live') loadLiveStats();
-      else loadDashboard();
+      else loadHome();
     });
     document.getElementById('refresh-board').addEventListener('click', () => { loadKpis(); loadIncidents(); });
     document.getElementById('sim-lakebase')?.addEventListener('click', () => runLatencySim('lakebase'));
@@ -1557,13 +2154,19 @@
     document.getElementById('genie-input').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('genie-send').click(); });
     document.querySelectorAll('.chip[data-q]').forEach(c => c.addEventListener('click', () => askGenie(c.dataset.q)));
 
-    // Init
+    // Init — replace initial history entry so back from first nav goes to browser exit, not duplicate
+    history.replaceState({ tab: activeTab }, '', pageUrl(activeTab));
+    renderBreadcrumbs(activeTab);
+    document.querySelector('.content')?.classList.toggle('wide', activeTab === 'analytics');
+    if (activeTab === 'home') loadHome();
     if (activeTab === 'dashboard') loadDashboard();
+    if (activeTab === 'analytics') loadAnalytics();
     if (activeTab === 'dispatch') { loadKpis(); loadIncidents(); loadLatencyHistory(); }
     initPathToggles();
     if (activeTab === 'live') { loadLiveScenarios(); startLivePolling(); }
     if (activeTab === 'genie') loadMlflowStatus();
     if (activeTab === 'agent') loadAgentAudit();
+    if (activeTab !== 'home') loadHealthPill();
   </script>
 </body>
 </html>

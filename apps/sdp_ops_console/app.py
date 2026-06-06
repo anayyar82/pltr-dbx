@@ -1054,6 +1054,156 @@ def _dashboard_data() -> dict:
     }
 
 
+def _analytics_data() -> dict:
+    """Chart-ready datasets for the Analytics Dashboard tab (AI/BI-style visualizations)."""
+    dash = _dashboard_data()
+    kpis = dash.get("kpis") or {}
+
+    market_severity = _execute_sql(
+        f"""
+        SELECT market, severity, open_incidents
+        FROM {CATALOG}.{GOLD}.metric_open_incidents_by_market
+        ORDER BY market, CASE severity WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 4 END
+        """,
+    )
+    markets_sorted = sorted({r["market"] for r in market_severity if r.get("market")})
+    severities = ["P1", "P2", "P3", "P4"]
+    ms_matrix: dict[str, dict[str, int]] = {m: {s: 0 for s in severities} for m in markets_sorted}
+    for row in market_severity:
+        m, s = row.get("market"), row.get("severity")
+        if m in ms_matrix and s in ms_matrix[m]:
+            ms_matrix[m][s] = int(row.get("open_incidents") or 0)
+
+    mttr = _execute_sql(
+        f"""
+        SELECT market, ROUND(avg_hours_to_resolve, 1) AS avg_hours, incident_count
+        FROM {CATALOG}.{GOLD}.metric_incident_mttr
+        ORDER BY avg_hours DESC
+        LIMIT 12
+        """,
+    )
+
+    order_sla = _execute_sql(
+        f"""
+        SELECT status, SUM(order_count) AS order_count
+        FROM {CATALOG}.{GOLD}.metric_order_fulfillment_sla
+        GROUP BY status
+        ORDER BY order_count DESC
+        """,
+    )
+
+    tech_util = _execute_sql(
+        f"""
+        SELECT market, status, SUM(technician_count) AS technician_count
+        FROM {CATALOG}.{GOLD}.metric_technician_utilization
+        GROUP BY market, status
+        ORDER BY market, status
+        """,
+    )
+    tech_markets = sorted({r["market"] for r in tech_util if r.get("market")})
+    tech_available = []
+    tech_busy = []
+    for m in tech_markets:
+        avail = sum(int(r["technician_count"] or 0) for r in tech_util if r["market"] == m and r["status"] == "AVAILABLE")
+        busy = sum(int(r["technician_count"] or 0) for r in tech_util if r["market"] == m and r["status"] != "AVAILABLE")
+        tech_available.append(avail)
+        tech_busy.append(busy)
+
+    trend = _execute_sql(
+        f"""
+        SELECT DATE(opened_at) AS day, COUNT(*) AS incident_count
+        FROM {CATALOG}.{GOLD}.service_incident
+        WHERE opened_at >= date_sub(current_date(), 14)
+        GROUP BY DATE(opened_at)
+        ORDER BY day
+        """,
+    )
+
+    service_mix = _execute_sql(
+        f"""
+        SELECT service_type, COUNT(*) AS incident_count
+        FROM {CATALOG}.{GOLD}.service_incident i
+        LEFT JOIN {CATALOG}.{GOLD}.service_incident_ops o ON i.incident_id = o.incident_id
+        WHERE COALESCE(o.status, i.status) IN ('OPEN', 'IN_PROGRESS', 'DISPATCHED')
+        GROUP BY service_type
+        ORDER BY incident_count DESC
+        """,
+    )
+
+    status_rows = _execute_sql(
+        f"""
+        SELECT COALESCE(o.status, i.status) AS status, COUNT(*) AS cnt
+        FROM {CATALOG}.{GOLD}.service_incident i
+        LEFT JOIN {CATALOG}.{GOLD}.service_incident_ops o ON i.incident_id = o.incident_id
+        WHERE COALESCE(o.status, i.status) IN ('OPEN', 'IN_PROGRESS', 'DISPATCHED', 'RESOLVED')
+        GROUP BY COALESCE(o.status, i.status)
+        ORDER BY cnt DESC
+        """,
+    )
+
+    active_sevs = [s for s in severities if any(ms_matrix[m].get(s, 0) for m in markets_sorted)]
+
+    return {
+        "kpis": kpis,
+        "refreshed_at": dash.get("refreshed_at"),
+        "ops_read_path": dash.get("ops_read_path"),
+        "catalog": CATALOG,
+        "schema": GOLD,
+        "severity_donut": {
+            "labels": [r["severity"] for r in dash.get("severity") or []],
+            "values": [int(r.get("incident_count") or 0) for r in dash.get("severity") or []],
+        },
+        "market_bar": {
+            "labels": [r["market"] for r in dash.get("markets") or []],
+            "open": [int(r.get("open_count") or 0) for r in dash.get("markets") or []],
+            "p1": [int(r.get("p1_count") or 0) for r in dash.get("markets") or []],
+        },
+        "market_severity_stacked": {
+            "labels": markets_sorted,
+            "series": [
+                {"label": s, "data": [ms_matrix[m].get(s, 0) for m in markets_sorted]}
+                for s in severities
+                if any(ms_matrix[m].get(s, 0) for m in markets_sorted)
+            ],
+        },
+        "status_pie": {
+            "labels": [r["status"] for r in status_rows],
+            "values": [int(r.get("cnt") or 0) for r in status_rows],
+        },
+        "orders_bar": {
+            "labels": [r["market"] for r in dash.get("orders") or []],
+            "values": [int(r.get("order_count") or 0) for r in dash.get("orders") or []],
+        },
+        "order_status": {
+            "labels": [r["status"] for r in order_sla],
+            "values": [int(r.get("order_count") or 0) for r in order_sla],
+        },
+        "tech_stacked": {
+            "labels": tech_markets,
+            "available": tech_available,
+            "busy": tech_busy,
+        },
+        "mttr_bar": {
+            "labels": [r["market"] for r in mttr],
+            "values": [float(r.get("avg_hours") or 0) for r in mttr],
+            "counts": [int(r.get("incident_count") or 0) for r in mttr],
+        },
+        "incident_trend": {
+            "labels": [str(r.get("day") or "")[:10] for r in trend],
+            "values": [int(r.get("incident_count") or 0) for r in trend],
+        },
+        "service_mix": {
+            "labels": [r.get("service_type") or "Unknown" for r in service_mix],
+            "values": [int(r.get("incident_count") or 0) for r in service_mix],
+        },
+        "heatmap": {
+            "markets": markets_sorted,
+            "severities": active_sevs,
+            "matrix": [[ms_matrix[m].get(s, 0) for s in active_sevs] for m in markets_sorted],
+        },
+    }
+
+
 def _lakebase_credentials() -> tuple[str, str]:
     """Fresh OAuth DB credential for the app service principal (Lakebase Autoscaling)."""
     if os.environ.get("LAKEBASE_PASSWORD") and LAKEBASE_USER:
@@ -1464,20 +1614,27 @@ def _agent_execute_dispatch(
 
 
 @app.get("/")
+@app.get("/home")
+@app.get("/dashboard")
 @app.get("/live")
 @app.get("/dispatch")
 @app.get("/genie")
 @app.get("/agent")
+@app.get("/analytics")
 def index():
     path_tabs = {
+        "/": "home",
+        "/home": "home",
+        "/dashboard": "dashboard",
         "/live": "live",
         "/dispatch": "dispatch",
         "/genie": "genie",
         "/agent": "agent",
+        "/analytics": "analytics",
     }
-    active_tab = path_tabs.get(request.path) or request.args.get("tab", "dashboard")
-    if active_tab not in ("dashboard", "dispatch", "live", "genie", "agent"):
-        active_tab = "dashboard"
+    active_tab = path_tabs.get(request.path) or request.args.get("tab", "home")
+    if active_tab not in ("home", "dashboard", "dispatch", "live", "genie", "agent", "analytics"):
+        active_tab = "home"
     return render_template(
         "index.html",
         catalog=CATALOG,
@@ -1494,6 +1651,11 @@ def index():
 @app.get("/api/dashboard")
 def dashboard_route():
     return jsonify(_dashboard_data())
+
+
+@app.get("/api/analytics")
+def analytics_route():
+    return jsonify(_analytics_data())
 
 
 @app.get("/health")
