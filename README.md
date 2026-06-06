@@ -8,7 +8,8 @@ Operational **Service Delivery Platform** demo migrated from Palantir Foundry to
 
 | Resource | Path |
 |----------|------|
-| **Project guide (components, architecture, runbook)** | [docs/ATT_SDP_Project_Guide.docx](docs/ATT_SDP_Project_Guide.docx) · [Markdown source](docs/ATT_SDP_Project_Guide.md) |
+| **Project guide (components, architecture, runbook)** | [docs/ATT_SDP_Project_Guide.md](docs/ATT_SDP_Project_Guide.md) · [DOCX](docs/ATT_SDP_Project_Guide.docx) |
+| **Architecture design document** | [docs/ATT_SDP_Architecture_Design.md](docs/ATT_SDP_Architecture_Design.md) |
 | Regenerate guide | `python3 scripts/build_project_guide.py` |
 | **New workspace install** | [install/README.md](install/README.md) · `./install.sh all --config config/deployment.yaml` |
 | Architecture slides (HTML/PDF) | `presentations/` · `python3 scripts/build_att_sdp_slides.py` |
