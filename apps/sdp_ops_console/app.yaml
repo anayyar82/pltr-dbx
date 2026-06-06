@@ -1,0 +1,52 @@
+name: att-sdp-ops-ankur
+description: >
+  ATT Service Delivery Platform ops console with Lakebase writeback and Genie analytics.
+  Connected to project att-ankur-demo.
+command:
+  - python
+  - app.py
+user_api_scopes:
+  - dashboards.genie
+  - sql
+resources:
+  - name: sdp-genie
+    genie_space:
+      space_id: "01f160fc477b16c6a0f63d8164cff930"
+      permission: CAN_RUN
+  - name: sdp_lakebase
+    database:
+      project_name: att-ankur-demo
+      branch: production
+      database_name: sdp_ops
+env:
+  - name: DBX_CATALOG
+    value: users
+  - name: DBX_GOLD_SCHEMA
+    value: ankur_nayyar
+  - name: LAKEBASE_PROJECT_ID
+    value: att-ankur-demo
+  - name: LAKEBASE_BRANCH
+    value: production
+  - name: LAKEBASE_HOST
+    value: ep-hidden-cell-d1mr7kp0.database.us-west-2.cloud.databricks.com
+  # Do not set pooler for Apps — SASL OAuth fails on -pooler host (see notebook 06)
+  - name: LAKEBASE_ENDPOINT
+    value: projects/att-ankur-demo/branches/production/endpoints/primary
+  - name: LAKEBASE_DB
+    value: sdp_ops
+  - name: LAKEBASE_SCHEMA
+    value: ankur_nayyar
+  - name: DATABRICKS_HOST
+    value: https://e2-demo-field-eng.cloud.databricks.com
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: 03560442e95cb440
+  - name: DATABRICKS_GENIE_SPACE_ID
+    value: "01f160fc477b16c6a0f63d8164cff930"
+  - name: SDP_E2E_JOB_NAME
+    value: sdp_write_refresh
+  - name: SDP_SEMANTIC_JOB_NAME
+    value: sdp_semantic_setup
+  - name: DATABRICKS_WORKSPACE_ID
+    value: "1444828305810485"
+  - name: MLFLOW_EXPERIMENT_NAME
+    value: /Shared/att-sdp-ops-console

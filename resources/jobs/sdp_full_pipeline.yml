@@ -1,0 +1,55 @@
+# Workflow 3 — Full data path: Autoloader bronze → SDP DLT → Lakebase → App.
+# Prerequisite: run sdp_semantic_setup once (gold tables + baseline seed).
+#
+# databricks bundle run sdp_full_pipeline -t e2_demo --profile e2-demo-field-eng
+# First run after cleanup:  --var dlt_full_refresh=true  (via job param full_refresh)
+
+resources:
+  jobs:
+    sdp_full_pipeline:
+      name: "[${bundle.target}] sdp_full_pipeline"
+      description: "Autoloader bronze landing → SDP DLT → Lakebase sync → MV refresh → App deploy."
+      parameters:
+        - name: scenario
+          default: new_p1_dallas
+      tasks:
+        - task_key: ingest_autoloader_bronze
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/07_generate_live_sdp_data
+            base_parameters:
+              scenario: "{{job.parameters.scenario}}"
+              write_mode: "append"
+              auto_run_dlt: "false"
+              skip_mv_refresh: "true"
+              skip_after_summary: "true"
+        - task_key: run_sdp_dlt
+          depends_on:
+            - task_key: ingest_autoloader_bronze
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: run_sdp_dlt
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+        - task_key: refresh_dispatch_mv
+          depends_on:
+            - task_key: sync_lakebase
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05_refresh_materialized_views
+        - task_key: deploy_ops_app
+          depends_on:
+            - task_key: refresh_dispatch_mv
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/10_deploy_ops_app
+            base_parameters:
+              bundle_root: ${workspace.file_path}
+        - task_key: show_kpis
+          depends_on:
+            - task_key: deploy_ops_app
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05c_show_stream_kpis
+      tags:
+        client: att
+        domain: sdp
+        workflow: full_pipeline

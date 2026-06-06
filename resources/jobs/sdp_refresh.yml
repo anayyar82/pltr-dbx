@@ -1,0 +1,54 @@
+# SDP refresh — run after append writes to bronze (no full refresh).
+# Pattern: notebook 07/08 append → databricks bundle run sdp_refresh
+#
+# databricks bundle run sdp_refresh -t e2_demo --profile e2-demo-field-eng
+
+resources:
+  jobs:
+    sdp_refresh:
+      name: "[${bundle.target}] sdp_refresh"
+      tasks:
+        - task_key: run_sdp_dlt
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: run_sdp_dlt
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+        - task_key: refresh_dispatch_mv
+          depends_on:
+            - task_key: sync_lakebase
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05_refresh_materialized_views
+      tags:
+        migration_source: foundry_build
+        client: att
+        domain: sdp
+        demo: refresh
+
+    sdp_service_delivery_refresh:
+      name: "[${bundle.target}] sdp_service_delivery_refresh"
+      schedule:
+        quartz_cron_expression: "0 */15 * * * ?"
+        timezone_id: America/Chicago
+        pause_status: PAUSED
+      tasks:
+        - task_key: run_sdp_dlt
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: run_sdp_dlt
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+        - task_key: refresh_dispatch_mv
+          depends_on:
+            - task_key: sync_lakebase
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05_refresh_materialized_views
+      tags:
+        migration_source: foundry_build
+        foundry_build_rid: ri.foundry.att.build.sdp-service-delivery
+        client: att
+        domain: sdp

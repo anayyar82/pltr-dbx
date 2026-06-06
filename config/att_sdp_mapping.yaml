@@ -1,0 +1,152 @@
+# Foundry → Databricks migration inventory — ATT Service Delivery Platform (SDP)
+# Demo domain for Palantir → Databricks migration showcase
+
+version: "1.0"
+project: att_sdp_service_delivery
+target:
+  catalog: users
+  bronze_schema: ankur_nayyar_bronze
+  silver_schema: ankur_nayyar_silver
+  gold_schema: ankur_nayyar
+
+# --- Object types (Foundry Objects → UC managed tables) ---
+object_types:
+  - foundry:
+      object_type_api: CustomerAccount
+      rid: "ri.ontology.att.object-type.customer-account"
+      primary_key_property: account_id
+    databricks:
+      table: customer_account
+      full_name: "{catalog}.{gold_schema}.customer_account"
+      primary_key: [account_id]
+
+  - foundry:
+      object_type_api: ServiceIncident
+      rid: "ri.ontology.att.object-type.service-incident"
+      primary_key_property: incident_id
+      actions: [update_incident_status]
+    databricks:
+      table: service_incident
+      full_name: "{catalog}.{gold_schema}.service_incident"
+      primary_key: [incident_id]
+      lakebase_writeback_table: "{catalog}.{gold_schema}.service_incident_ops"
+
+  - foundry:
+      object_type_api: ServiceOrder
+      rid: "ri.ontology.att.object-type.service-order"
+      primary_key_property: order_id
+    databricks:
+      table: service_order
+      full_name: "{catalog}.{gold_schema}.service_order"
+      primary_key: [order_id]
+
+  - foundry:
+      object_type_api: FieldTechnician
+      rid: "ri.ontology.att.object-type.field-technician"
+      primary_key_property: technician_id
+    databricks:
+      table: field_technician
+      full_name: "{catalog}.{gold_schema}.field_technician"
+      primary_key: [technician_id]
+
+# --- Links ---
+links:
+  - foundry:
+      link_type_api: TechnicianAssignedToIncident
+      rid: "ri.ontology.att.link-type.technician-assigned-to-incident"
+      from_object: FieldTechnician
+      to_object: ServiceIncident
+      cardinality: many_to_many
+    databricks:
+      bridge_table: bridge_incident_technician
+      full_name: "{catalog}.{gold_schema}.bridge_incident_technician"
+      materialized_view: mv_incident_dispatch_board
+
+# --- Builds (Foundry Builds → DLT + Workflows) ---
+builds:
+  - foundry:
+      build_rid: "ri.foundry.att.build.sdp-service-delivery"
+      name: sdp-service-delivery-build
+    databricks:
+      pipeline: sdp_service_delivery_dlt
+      job: sdp_service_delivery_refresh
+      notebook_or_module: src/pipelines/dlt/sdp_service_delivery.py
+
+# --- Applications ---
+applications:
+  - foundry:
+      type: workshop
+      module_rid: "ri.workshop.att.module.sdp-ops-console"
+      object_views: [ServiceIncident, FieldTechnician]
+    databricks:
+      type: databricks_app
+      path: apps/sdp_ops_console
+      lakebase_writeback: true
+
+  - foundry:
+      type: slate
+      dashboard_rid: "ri.slate.att.dashboard.sdp-kpis"
+    databricks:
+      type: ai_bi_dashboard
+      semantic_models:
+        - src/semantic/metrics/sdp_kpis.sql
+
+  - foundry:
+      type: genie
+      description: Natural language analytics (no Foundry equivalent — net new capability)
+    databricks:
+      type: genie_space
+      config: config/genie_space.yaml
+
+# --- AIP / agents → AgentBricks ---
+agents:
+  - foundry:
+      aip_agent_rid: "ri.aip.att.agent.incident-triage"
+      ontology_functions: [search_incidents, recommend_technician, assign_technician]
+    databricks:
+      type: agent_bricks
+      module: src/agents/sdp_incident_agent.py
+      tools_config: config/sdp_agent_tools.yaml
+
+# --- Lakebase writeback (replaces Foundry Actions) ---
+lakebase:
+  project_id: att-ankur-demo
+  project_uid: 52d0022f-9c22-43bd-80fb-0971d8c46080
+  project_url: https://e2-demo-field-eng.cloud.databricks.com/lakebase/projects/52d0022f-9c22-43bd-80fb-0971d8c46080
+  branch_id: production
+  endpoint: projects/att-ankur-demo/branches/production/endpoints/primary
+  postgres_host: ep-hidden-cell-d1mr7kp0-pooler.database.us-west-2.cloud.databricks.com
+  postgres_database: sdp_ops
+  postgres_schema: ankur_nayyar
+  config: config/lakebase.yaml
+  sync_tables:
+    - synced_table: "{catalog}.{gold_schema}.service_incident_pg"
+      source: "{catalog}.{gold_schema}.service_incident"
+      mode: TRIGGERED
+    - synced_table: "{catalog}.{gold_schema}.service_incident_ops_pg"
+      source: "{catalog}.{gold_schema}.service_incident_ops"
+      mode: TRIGGERED
+  writeback:
+    postgres_table: "{postgres_schema}.service_incident_ops"
+    uc_table: "{catalog}.{gold_schema}.service_incident_ops"
+    lakehouse_sync: true
+
+# --- Notebooks (Quiver) ---
+notebooks:
+  - foundry:
+      quiver_rid: "ri.quiver.att.analysis.sdp-incidents"
+    databricks:
+      path: notebooks/04_explore_sdp_incidents.py
+
+# --- Cutover ---
+cutover:
+  parallel_run_days: 14
+  validation:
+    - name: row_count_parity
+      tolerance_pct: 0.1
+    - name: pk_uniqueness
+    - name: fk_orphan_rate
+      max_pct: 0.01
+    - name: writeback_roundtrip
+      description: App write to Lakebase appears in Delta within SLA
+  signoff_roles: [att_data_owner, platform, noc_ops_lead]

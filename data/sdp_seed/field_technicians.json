@@ -1,0 +1,9 @@
+[
+  {"technician_id": "TECH-201", "technician_name": "Maria Santos", "market": "DALLAS", "status": "DISPATCHED", "skill_level": "L2", "updated_at": "2026-06-05T07:00:00Z"},
+  {"technician_id": "TECH-202", "technician_name": "James Chen", "market": "DALLAS", "status": "AVAILABLE", "skill_level": "L3", "updated_at": "2026-06-05T06:00:00Z"},
+  {"technician_id": "TECH-203", "technician_name": "Priya Patel", "market": "DALLAS", "status": "AVAILABLE", "skill_level": "L2", "updated_at": "2026-06-05T06:00:00Z"},
+  {"technician_id": "TECH-301", "technician_name": "Robert Williams", "market": "ATLANTA", "status": "DISPATCHED", "skill_level": "L3", "updated_at": "2026-06-05T05:30:00Z"},
+  {"technician_id": "TECH-302", "technician_name": "Angela Brooks", "market": "ATLANTA", "status": "AVAILABLE", "skill_level": "L2", "updated_at": "2026-06-05T06:00:00Z"},
+  {"technician_id": "TECH-401", "technician_name": "Kevin O'Brien", "market": "CHICAGO", "status": "AVAILABLE", "skill_level": "L1", "updated_at": "2026-06-05T06:00:00Z"},
+  {"technician_id": "TECH-402", "technician_name": "Sofia Martinez", "market": "CHICAGO", "status": "AVAILABLE", "skill_level": "L2", "updated_at": "2026-06-05T06:00:00Z"}
+]

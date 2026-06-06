@@ -1,0 +1,23 @@
+# Continuous NOC feed — appends events every 3 minutes for the streaming DLT pipeline.
+# Enable after baseline seed + bundle deploy (continuous DLT must be RUNNING).
+
+resources:
+  jobs:
+    sdp_stream_feed:
+      name: "[${bundle.target}] sdp_stream_feed"
+      schedule:
+        quartz_cron_expression: "0 */3 * * * ?"
+        timezone_id: America/Chicago
+        pause_status: PAUSED
+      tasks:
+        - task_key: append_stream_events
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/08_stream_sdp_continuous_feed
+            base_parameters:
+              events_per_run: "1"
+              include_orders: "true"
+      tags:
+        migration_source: foundry_build
+        client: att
+        domain: sdp
+        demo: stream_feed

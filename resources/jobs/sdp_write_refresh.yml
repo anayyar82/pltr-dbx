@@ -1,0 +1,47 @@
+# Write test data + refresh (one command for demos / App Live tab).
+# databricks bundle run sdp_write_refresh -t e2_demo --profile e2-demo-field-eng
+
+resources:
+  jobs:
+    sdp_write_refresh:
+      name: "[${bundle.target}] sdp_write_refresh"
+      parameters:
+        - name: scenario
+          default: new_p1_dallas
+      tasks:
+        - task_key: write_bronze
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/07_generate_live_sdp_data
+            base_parameters:
+              scenario: "{{job.parameters.scenario}}"
+              write_mode: "append"
+              auto_run_dlt: "false"
+              skip_mv_refresh: "true"
+              skip_after_summary: "true"
+        - task_key: run_sdp_dlt
+          depends_on:
+            - task_key: write_bronze
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: run_sdp_dlt
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+        - task_key: refresh_dispatch_mv
+          depends_on:
+            - task_key: sync_lakebase
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05_refresh_materialized_views
+        - task_key: show_kpis
+          depends_on:
+            - task_key: refresh_dispatch_mv
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05c_show_stream_kpis
+      tags:
+        client: att
+        domain: sdp
+        demo: write_refresh
+      permissions:
+        - level: CAN_MANAGE_RUN
+          service_principal_name: be33de06-36a1-467e-926b-902c55903267

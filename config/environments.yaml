@@ -1,0 +1,9 @@
+# Environment overrides (optional local copy: environments.local.yaml — gitignored)
+
+environments:
+  e2_demo:
+    workspace_host: https://e2-demo-field-eng.cloud.databricks.com
+    catalog: users
+    bronze_schema: ankur_nayyar
+    silver_schema: ankur_nayyar
+    gold_schema: ankur_nayyar

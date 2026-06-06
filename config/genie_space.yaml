@@ -1,0 +1,76 @@
+# Genie Space configuration for ATT SDP demo
+# Deploy via Databricks UI: AI/BI → Genie → Create Space
+# Or via REST API using this manifest as reference.
+#
+# Genie replaces Foundry Slate ad-hoc exploration + Quiver for business users.
+
+genie_space:
+  name: att_sdp_service_delivery
+  space_id: "01f160fc477b16c6a0f63d8164cff930"
+  title: "ATT SDP Service Delivery"
+  description: >
+    Natural language analytics for ATT Service Delivery Platform.
+    Ask about open incidents, order fulfillment, technician availability,
+    and market-level SLA performance.
+  catalog: users
+  schema: ankur_nayyar
+
+  # Tables and views exposed to Genie (governed UC assets only)
+  tables:
+    - name: service_incident
+      description: Network and service incidents with severity and status
+      sample_questions:
+        - How many P1 incidents are open in Dallas?
+        - What is the average time to resolve fiber incidents this month?
+        - Show open incidents for enterprise customers in Atlanta
+
+    - name: service_order
+      description: Service fulfillment orders and provisioning status
+      sample_questions:
+        - How many orders are stuck in provisioning?
+        - Which markets have the most pending fiber orders?
+
+    - name: field_technician
+      description: Field technician roster and availability
+      sample_questions:
+        - How many L2 technicians are available in Chicago?
+        - Which technicians are currently dispatched?
+
+    - name: mv_incident_dispatch_board
+      description: Operational dispatch board joining incidents, accounts, technicians
+      sample_questions:
+        - Show all dispatched P2 incidents with assigned technicians
+        - List enterprise accounts with open P1 incidents
+
+    - name: metric_sdp_executive_summary
+      description: Executive KPI rollup for SDP health
+      sample_questions:
+        - Give me the current SDP executive summary
+        - How many P1 incidents and available technicians do we have right now?
+
+    - name: metric_open_incidents_by_market
+      description: Open incident counts by market and severity
+      sample_questions:
+        - Compare open incident counts across all markets
+        - Which market has the most P1 incidents?
+
+  # Trusted SQL assets (certified by data owner — Genie uses these as hints)
+  certified_metrics:
+    - metric_incident_mttr
+    - metric_order_fulfillment_sla
+    - metric_technician_utilization
+
+  instructions: |
+    You are an analytics assistant for ATT Service Delivery Operations.
+    Always filter by market when the user mentions a city or region.
+    Severity levels are P1 (critical) through P4 (low).
+    Incident statuses: OPEN, IN_PROGRESS, DISPATCHED, RESOLVED, CLOSED.
+    Prefer mv_incident_dispatch_board for operational dispatch questions.
+    For executive rollups, use metric_sdp_executive_summary.
+
+  access:
+    # Map from Foundry roles (see config/environments.yaml)
+    groups:
+      - att_sdp_analysts
+      - att_sdp_ops
+      - att_sdp_executives

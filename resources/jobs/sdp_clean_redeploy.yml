@@ -1,0 +1,37 @@
+# Wipe schema → redeploy DDL/seed → DLT full refresh → MV → Lakebase sync
+
+resources:
+  jobs:
+    sdp_clean_redeploy:
+      name: "[${bundle.target}] sdp_clean_redeploy"
+      tasks:
+        - task_key: cleanup_sdp_schema
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/00_cleanup_att_sdp
+            base_parameters:
+              confirm_drop: "yes"
+        - task_key: bootstrap_bronze_seed
+          depends_on:
+            - task_key: cleanup_sdp_schema
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/01_bootstrap_bronze_seed
+        - task_key: run_sdp_dlt_full
+          depends_on:
+            - task_key: bootstrap_bronze_seed
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+            full_refresh: true
+        - task_key: deploy_semantic_layer
+          depends_on:
+            - task_key: run_sdp_dlt_full
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/10_deploy_semantic_layer
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: deploy_semantic_layer
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+      tags:
+        client: att
+        domain: sdp
+        demo: clean_redeploy

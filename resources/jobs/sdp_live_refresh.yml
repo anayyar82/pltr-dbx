@@ -1,0 +1,32 @@
+# Refresh only (DLT + Lakebase + MV) — run after manual bronze append.
+
+resources:
+  jobs:
+    sdp_live_data_refresh:
+      name: "[${bundle.target}] sdp_live_data_refresh"
+      tasks:
+        - task_key: run_sdp_dlt
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: run_sdp_dlt
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+        - task_key: refresh_dispatch_mv
+          depends_on:
+            - task_key: sync_lakebase
+          sql_task:
+            warehouse_id: ${var.sql_warehouse_id}
+            file:
+              path: ${workspace.file_path}/src/semantic/metrics/refresh_dispatch_mv.sql
+        - task_key: show_kpis
+          depends_on:
+            - task_key: refresh_dispatch_mv
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05c_show_stream_kpis
+      tags:
+        migration_source: foundry_build
+        client: att
+        domain: sdp
+        demo: live_refresh

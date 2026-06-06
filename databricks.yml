@@ -1,0 +1,45 @@
+# Databricks Asset Bundle — ATT Service Delivery Platform demo
+# Docs: https://docs.databricks.com/en/dev-tools/bundles/index.html
+
+bundle:
+  name: att-sdp-demo
+
+sync:
+  include:
+    - src/**
+    - notebooks/**
+    - config/**
+    - apps/sdp_ops_console/**
+    - data/sdp_seed/**
+
+include:
+  - resources/pipelines.yml
+  - resources/jobs/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: users
+  bronze_schema:
+    default: ankur_nayyar
+  silver_schema:
+    default: ankur_nayyar
+  gold_schema:
+    default: ankur_nayyar
+  sql_warehouse_id:
+    description: SQL warehouse for MV refresh (DBSQL-created MVs)
+    default: 03560442e95cb440
+
+targets:
+  e2_demo:
+    mode: development
+    default: true
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com
+      root_path: ~/pltr-dbx
+    variables:
+      catalog: users
+      bronze_schema: ankur_nayyar
+      silver_schema: ankur_nayyar
+      gold_schema: ankur_nayyar
+      sql_warehouse_id: 03560442e95cb440

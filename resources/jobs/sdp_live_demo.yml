@@ -1,0 +1,46 @@
+# Write + refresh (alias for sdp_write_refresh)
+
+resources:
+  jobs:
+    sdp_live_demo:
+      name: "[${bundle.target}] sdp_live_demo"
+      parameters:
+        - name: scenario
+          default: new_p1_dallas
+      tasks:
+        - task_key: write_bronze
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/07_generate_live_sdp_data
+            base_parameters:
+              scenario: "{{job.parameters.scenario}}"
+              write_mode: "append"
+              auto_run_dlt: "false"
+              skip_mv_refresh: "true"
+              skip_after_summary: "true"
+        - task_key: run_sdp_dlt
+          depends_on:
+            - task_key: write_bronze
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sdp_service_delivery_dlt.id}
+        - task_key: sync_lakebase
+          depends_on:
+            - task_key: run_sdp_dlt
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/09_sync_lakebase_from_gold
+        - task_key: refresh_dispatch_mv
+          depends_on:
+            - task_key: sync_lakebase
+          sql_task:
+            warehouse_id: ${var.sql_warehouse_id}
+            file:
+              path: ${workspace.file_path}/src/semantic/metrics/refresh_dispatch_mv.sql
+        - task_key: show_kpis
+          depends_on:
+            - task_key: refresh_dispatch_mv
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/05c_show_stream_kpis
+      tags:
+        migration_source: foundry_build
+        client: att
+        domain: sdp
+        demo: live_demo

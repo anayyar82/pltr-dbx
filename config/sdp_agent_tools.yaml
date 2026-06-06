@@ -1,0 +1,119 @@
+# AgentBricks / Mosaic AI agent tools for ATT SDP Incident Triage
+# Replaces Foundry AIP agent: ri.aip.att.agent.incident-triage
+
+agent:
+  name: sdp_incident_triage
+  description: >
+    Triage network incidents, recommend technician dispatch,
+    and summarize market-level service health.
+  model: databricks-meta-llama-3-3-70b-instruct
+  framework: agent_bricks  # Databricks AgentBricks managed agent
+
+tools:
+  - name: search_incidents
+    description: Search open incidents by market, severity, service type, or keyword
+    type: sql
+    parameters:
+      - name: market
+        type: string
+        optional: true
+      - name: severity
+        type: string
+        optional: true
+      - name: keyword
+        type: string
+        optional: true
+    sql_template: |
+      SELECT incident_id, title, severity, status, market, service_type, opened_at
+      FROM {catalog}.{gold_schema}.service_incident
+      WHERE status IN ('OPEN', 'IN_PROGRESS', 'DISPATCHED')
+        AND (:market IS NULL OR market = UPPER(:market))
+        AND (:severity IS NULL OR severity = UPPER(:severity))
+        AND (:keyword IS NULL OR LOWER(title) LIKE CONCAT('%', LOWER(:keyword), '%')
+             OR LOWER(description) LIKE CONCAT('%', LOWER(:keyword), '%'))
+      ORDER BY
+        CASE severity WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 4 END,
+        opened_at ASC
+      LIMIT 25
+
+  - name: recommend_technician
+    description: Find available technicians for an incident market and required skill level
+    type: sql
+    parameters:
+      - name: market
+        type: string
+        required: true
+      - name: min_skill_level
+        type: string
+        optional: true
+    sql_template: |
+      SELECT technician_id, technician_name, market, skill_level, status
+      FROM {catalog}.{gold_schema}.field_technician
+      WHERE market = UPPER(:market)
+        AND status = 'AVAILABLE'
+        AND (:min_skill_level IS NULL OR skill_level >= :min_skill_level)
+      ORDER BY skill_level DESC
+      LIMIT 5
+
+  - name: summarize_market_health
+    description: Aggregate open incidents, orders, and technician availability for a market
+    type: sql
+    parameters:
+      - name: market
+        type: string
+        required: true
+    sql_template: |
+      SELECT
+        :market AS market,
+        (SELECT COUNT(*) FROM {catalog}.{gold_schema}.service_incident
+         WHERE market = UPPER(:market) AND status IN ('OPEN','IN_PROGRESS','DISPATCHED')) AS open_incidents,
+        (SELECT COUNT(*) FROM {catalog}.{gold_schema}.service_incident
+         WHERE market = UPPER(:market) AND severity = 'P1' AND status != 'CLOSED') AS open_p1,
+        (SELECT COUNT(*) FROM {catalog}.{gold_schema}.service_order
+         WHERE market = UPPER(:market) AND status = 'PROVISIONING') AS orders_provisioning,
+        (SELECT COUNT(*) FROM {catalog}.{gold_schema}.field_technician
+         WHERE market = UPPER(:market) AND status = 'AVAILABLE') AS available_technicians
+
+  - name: assign_technician
+    description: Propose a technician assignment for an incident (writes to bridge table)
+    type: python
+    parameters:
+      - name: incident_id
+        type: string
+        required: true
+      - name: technician_id
+        type: string
+        required: true
+    note: >
+      Requires human approval before execution (AgentBricks approval gate).
+      Writes to bridge_incident_technician with assignment_status=PROPOSED.
+
+  - name: update_incident_status
+    description: Update incident status and ops notes via Lakebase writeback path
+    type: python
+    parameters:
+      - name: incident_id
+        type: string
+        required: true
+      - name: status
+        type: string
+        required: true
+      - name: ops_notes
+        type: string
+        optional: true
+    note: >
+      Writes to service_incident_ops (Lakebase-synced). Requires CONTENT_EDITOR role.
+
+governance:
+  require_uc_grants: true
+  audit_table: "{catalog}.{gold_schema}.agent_audit_log"
+  approval_required_tools:
+    - assign_technician
+    - update_incident_status
+  max_rows_per_query: 100
+
+system_prompt: |
+  You are the ATT Service Delivery incident triage agent.
+  Prioritize P1 incidents. Always check technician availability before recommending dispatch.
+  For write actions (assign_technician, update_incident_status), explain your reasoning
+  and request human approval. Ground all answers in UC gold tables only.

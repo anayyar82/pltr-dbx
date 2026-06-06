@@ -1,0 +1,21 @@
+# Refresh dispatch board MV on a schedule so the Ops Console shows streaming updates.
+
+resources:
+  jobs:
+    sdp_stream_mv_refresh:
+      name: "[${bundle.target}] sdp_stream_mv_refresh"
+      schedule:
+        quartz_cron_expression: "0 */5 * * * ?"
+        timezone_id: America/Chicago
+        pause_status: PAUSED
+      tasks:
+        - task_key: refresh_dispatch_mv
+          sql_task:
+            warehouse_id: ${var.sql_warehouse_id}
+            file:
+              path: ${workspace.file_path}/src/semantic/metrics/refresh_dispatch_mv.sql
+      tags:
+        migration_source: foundry_build
+        client: att
+        domain: sdp
+        demo: stream_mv

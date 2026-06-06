@@ -1,0 +1,18 @@
+# Workflow 1 — Wipe all SDP tables, views, MVs, and bronze volume data.
+# databricks bundle run sdp_cleanup -t e2_demo --profile e2-demo-field-eng
+
+resources:
+  jobs:
+    sdp_cleanup:
+      name: "[${bundle.target}] sdp_cleanup"
+      description: "Drop all SDP tables, views, materialized views, and clear bronze volumes."
+      tasks:
+        - task_key: cleanup_sdp_schema
+          notebook_task:
+            notebook_path: ${workspace.file_path}/notebooks/00_cleanup_att_sdp
+            base_parameters:
+              confirm_drop: "yes"
+      tags:
+        client: att
+        domain: sdp
+        workflow: cleanup

@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    sdp_service_delivery_dlt:
+      name: "[${bundle.target}] sdp_service_delivery_dlt"
+      catalog: ${var.catalog}
+      target: ${var.gold_schema}
+      serverless: true
+      development: true
+      continuous: false
+      channel: CURRENT
+      edition: ADVANCED
+      libraries:
+        - notebook:
+            path: ../src/pipelines/dlt/sdp_service_delivery.py
+      configuration:
+        bundle.catalog: ${var.catalog}
+        bundle.bronze_schema: ${var.bronze_schema}
+        bundle.silver_schema: ${var.silver_schema}
+        bundle.gold_schema: ${var.gold_schema}

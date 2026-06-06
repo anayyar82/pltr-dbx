@@ -1,0 +1,41 @@
+# Lakebase Autoscaling project — ATT SDP writeback
+# UI: https://e2-demo-field-eng.cloud.databricks.com/lakebase/projects/52d0022f-9c22-43bd-80fb-0971d8c46080
+
+lakebase:
+  workspace_host: https://e2-demo-field-eng.cloud.databricks.com
+  project_id: att-ankur-demo
+  project_uid: 52d0022f-9c22-43bd-80fb-0971d8c46080
+  branch_id: production
+  branch_resource: projects/att-ankur-demo/branches/production
+  endpoint_resource: projects/att-ankur-demo/branches/production/endpoints/primary
+  postgres_host: ep-hidden-cell-d1mr7kp0.database.us-west-2.cloud.databricks.com
+  postgres_pooler_host: ep-hidden-cell-d1mr7kp0-pooler.database.us-west-2.cloud.databricks.com
+  postgres_database: sdp_ops
+  postgres_schema: ankur_nayyar
+
+# Unity Catalog targets
+catalog: users
+gold_schema: ankur_nayyar
+
+# Synced tables (UC → Lakebase Postgres, read-only in Postgres)
+# Docs: https://docs.databricks.com/en/oltp/projects/sync-tables
+synced_tables:
+  - synced_table_id: users.ankur_nayyar.service_incident_pg
+    source_table: users.ankur_nayyar.service_incident
+    primary_key: [incident_id]
+    scheduling_policy: TRIGGERED
+    purpose: Low-latency incident reads for Ops Console
+
+  - synced_table_id: users.ankur_nayyar.service_incident_ops_pg
+    source_table: users.ankur_nayyar.service_incident_ops
+    primary_key: [incident_id]
+    scheduling_policy: TRIGGERED
+    purpose: Mirror ops-editable fields UC → Postgres
+
+# Writable Postgres table for app writeback (Lakebase → UC via Lakehouse Sync)
+# App PATCH writes here; enable Lakehouse Sync on schema in project UI
+writeback:
+  postgres_table: service_incident_ops
+  uc_table: users.ankur_nayyar.service_incident_ops
+  columns: [incident_id, status, assigned_technician_id, ops_notes, updated_at, updated_by]
+  foundry_action_rid: ri.foundry.att.action.update-incident-status

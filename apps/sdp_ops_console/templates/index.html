@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATT SDP — Service Delivery Console</title>
+  <style>
+    :root {
+      --bg: #0a1220; --surface: #121f33; --surface2: #1a2d47; --border: #2a4568;
+      --text: #f0f6fc; --text-secondary: #c8d9ea; --muted: #9eb8d4;
+      --accent: #33bdf5; --accent-dim: #0095da; --accent-hover: #5ccaff;
+      --navy: #0a2540; --p1: #ff6b6b; --p2: #ffb74d; --p3: #b0bec5;
+      --ok: #66bb6a; --warn: #ffa726; --sidebar: 240px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent-hover); text-decoration: none; }
+    a:hover { color: #7dd3fc; }
+    button { font-family: inherit; color: inherit; }
+    label { color: var(--text-secondary); }
+    h1, h2, h3, h4, strong { color: var(--text); }
+    td { color: var(--text-secondary); }
+    input, select, textarea { color: var(--text); }
+    input::placeholder { color: var(--muted); }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar); min-height: 100vh; background: var(--navy);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      position: fixed; left: 0; top: 0; z-index: 100;
+    }
+    .brand { padding: 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .brand-logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+    .brand-logo span { color: var(--accent); }
+    .brand-sub { font-size: 0.72rem; color: #b8cfe4; margin-top: 0.25rem; line-height: 1.4; }
+    .nav { flex: 1; padding: 0.75rem 0.5rem; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.65rem; width: 100%;
+      padding: 0.65rem 0.85rem; margin-bottom: 0.25rem; border: none; border-radius: 8px;
+      background: transparent; color: #d0e4f5; font-size: 0.88rem;
+      font-weight: 500; cursor: pointer; text-align: left; transition: all .15s;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .nav-item.active { background: var(--accent); color: #fff; font-weight: 600; }
+    .nav-icon { font-size: 1.1rem; width: 1.4rem; text-align: center; }
+    .sidebar-footer {
+      padding: 1rem; border-top: 1px solid rgba(255,255,255,.08);
+      font-size: 0.72rem; color: #9eb8d4; line-height: 1.5;
+    }
+    .live-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--ok); box-shadow: 0 0 8px var(--ok); margin-right: 6px;
+      animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* Main */
+    .main { margin-left: var(--sidebar); flex: 1; min-height: 100vh; }
+    .topbar {
+      padding: 1rem 1.75rem; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--surface);
+    }
+    .topbar h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
+    .topbar p { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem; }
+    .topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
+    .content { padding: 1.5rem 1.75rem 2.5rem; max-width: 1280px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Cards & KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .kpi-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.1rem 1.25rem; position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent);
+    }
+    .kpi-card.alert::before { background: var(--p1); }
+    .kpi-card.warn::before { background: var(--warn); }
+    .kpi-card.ok::before { background: var(--ok); }
+    .kpi-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-value { font-size: 2rem; font-weight: 700; margin: 0.35rem 0 0; line-height: 1; color: var(--text); }
+    .kpi-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    @media (max-width: 960px) {
+      .sidebar { width: 64px; }
+      .sidebar .brand-sub, .sidebar .nav-item span, .sidebar-footer { display: none; }
+      .main { margin-left: 64px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1rem;
+    }
+    .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+    .card-sub { font-size: 0.78rem; color: var(--muted); }
+
+    /* Charts (CSS) */
+    .bar-chart { display: flex; flex-direction: column; gap: 0.65rem; }
+    .bar-row { display: grid; grid-template-columns: 72px 1fr 36px; gap: 0.65rem; align-items: center; font-size: 0.82rem; }
+    .bar-label { color: var(--text-secondary); font-weight: 500; }
+    .bar-track { background: var(--surface2); border-radius: 6px; height: 10px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); transition: width .5s ease; }
+    .bar-fill.p1 { background: linear-gradient(90deg, #b71c1c, var(--p1)); }
+    .bar-val { text-align: right; font-weight: 600; font-size: 0.85rem; color: var(--text); }
+
+    .donut-wrap { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+    .donut-legend { display: flex; flex-direction: column; gap: 0.45rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-secondary); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+    /* Demo guide */
+    .demo-guide {
+      background: linear-gradient(135deg, #0d3a5c 0%, #155a8a 100%);
+      border: 1px solid #3d8cc4; border-radius: 12px; padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem; color: var(--text);
+    }
+    .demo-guide h3 { font-size: 1rem; margin-bottom: 0.75rem; color: #fff; }
+    .demo-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+    .demo-step {
+      background: rgba(255,255,255,.08); border-radius: 8px; padding: 0.85rem;
+      font-size: 0.82rem; line-height: 1.45; cursor: pointer; transition: background .15s;
+      border: 1px solid rgba(255,255,255,.12); color: #e2eef8;
+    }
+    .demo-step:hover { background: rgba(51,189,245,.2); border-color: var(--accent); color: #fff; }
+    .demo-step strong { display: block; color: #7dd3fc; font-size: 0.75rem; margin-bottom: 0.25rem; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th {
+      background: var(--surface2); color: var(--text-secondary); font-weight: 600;
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em;
+      padding: 0.7rem 0.85rem; text-align: left; white-space: nowrap;
+    }
+    td { padding: 0.75rem 0.85rem; border-top: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: rgba(0,168,232,.04); }
+    code { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #7dd3fc; }
+
+    .pill {
+      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: .02em;
+    }
+    .pill-P1 { background: rgba(255,82,82,.18); color: #ff8a80; }
+    .pill-P2 { background: rgba(255,183,77,.18); color: #ffcc80; }
+    .pill-P3, .pill-P4 { background: rgba(144,164,174,.2); color: #cfd8dc; }
+    .pill-OPEN { background: rgba(51,189,245,.2); color: #7dd3fc; }
+    .pill-IN_PROGRESS { background: rgba(255,152,0,.15); color: var(--warn); }
+    .pill-DISPATCHED { background: rgba(76,175,80,.15); color: #81c784; }
+    .pill-RESOLVED { background: rgba(144,164,174,.18); color: #b0bec5; }
+
+    /* Buttons */
+    .btn {
+      background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.45rem 0.85rem; font-size: 0.85rem; cursor: pointer;
+      font-weight: 500; transition: all .15s;
+    }
+    .btn:hover { border-color: var(--accent); color: #fff; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-sm { padding: 0.3rem 0.55rem; font-size: 0.75rem; }
+    .btn-group { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .btn-pending {
+      position: relative; pointer-events: none; opacity: 0.9;
+    }
+    .btn-pending::after {
+      content: ''; display: inline-block; width: 0.65rem; height: 0.65rem; margin-left: 0.35rem;
+      border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+      animation: spin 0.55s linear infinite; vertical-align: -1px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    tr.row-updating td { background: rgba(51,189,245,.12) !important; }
+    tr.row-saved td { animation: rowFlashOk 0.55s ease; }
+    tr.row-error td { animation: rowFlashErr 0.55s ease; }
+    @keyframes rowFlashOk {
+      0%, 100% { background: transparent; }
+      35% { background: rgba(102,187,106,.28); }
+    }
+    @keyframes rowFlashErr {
+      0%, 100% { background: transparent; }
+      35% { background: rgba(255,107,107,.28); }
+    }
+    tr.row-exit { opacity: 0; transform: translateX(10px); transition: opacity 0.18s, transform 0.18s; }
+    .dispatch-sync {
+      font-size: 0.78rem; color: var(--text-secondary); margin: -0.5rem 0 0.85rem; min-height: 1.1rem;
+    }
+    .dispatch-sync.syncing { color: var(--accent); }
+    .dispatch-sync.synced { color: var(--ok); }
+    .dispatch-sync.error { color: #ff8a80; }
+    .path-panel {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem 1.15rem; margin-bottom: 1rem;
+    }
+    .path-panel .card-title { margin-bottom: 0.75rem; font-size: 0.9rem; }
+    .path-toggles { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.75rem; }
+    .path-toggles label { font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .seg-control {
+      display: inline-flex; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 2px;
+    }
+    .seg-control .seg {
+      border: none; background: transparent; color: var(--muted); font-size: 0.78rem;
+      padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 500;
+    }
+    .seg-control .seg.active { background: var(--accent); color: #fff; }
+    .seg-control .seg:not(.active):hover { color: var(--text); }
+    .latency-strip {
+      display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary);
+    }
+    .latency-strip .lat-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .latency-strip .lat-val.fast { color: var(--ok); }
+    .latency-strip .lat-val.slow { color: var(--warn); }
+    .latency-strip .lat-path { color: var(--muted); font-size: 0.72rem; }
+    .lat-badge {
+      display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 0.12rem 0.45rem;
+      border-radius: 4px; margin-left: 0.35rem; vertical-align: middle;
+    }
+    .lat-badge.lb { background: rgba(251,140,0,.18); color: #ffb74d; }
+    .lat-badge.wh { background: rgba(51,189,245,.15); color: var(--accent-hover); }
+    select {
+      background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.85rem;
+    }
+    select option { background: #1a2d47; color: var(--text); }
+    .toolbar { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+
+    /* Genie */
+    .genie-layout { display: grid; grid-template-rows: auto 1fr auto; gap: 0.75rem; min-height: 520px; }
+    .genie-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 1100px) { .genie-split { grid-template-columns: 1fr; } }
+    .genie-chat-col { display: flex; flex-direction: column; gap: 0.65rem; min-height: 520px; }
+    .genie-dash-col {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem; overflow-y: auto; max-height: 75vh;
+    }
+    .genie-dash-col h3 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+    .genie-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.65rem; margin-bottom: 0.75rem; }
+    .genie-kpi { background: var(--surface2); border-radius: 8px; padding: 0.75rem; text-align: center; }
+    .genie-kpi label { display: block; font-size: 0.68rem; color: var(--text-secondary); text-transform: uppercase; }
+    .genie-kpi strong { font-size: 1.4rem; display: block; margin-top: 0.25rem; color: var(--text); }
+    .chart-box { position: relative; height: 260px; margin-bottom: 0.75rem; }
+    .mlflow-badge { margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--surface2); border-radius: 8px; font-size: 0.75rem; color: var(--muted); }
+    .panel-title { font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: .04em; }
+    .genie-chat {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      overflow-y: auto; padding: 1rem; max-height: 55vh;
+    }
+    .genie-msg { margin-bottom: 1rem; max-width: 88%; }
+    .genie-msg.user { margin-left: auto; text-align: right; }
+    .genie-bubble {
+      display: inline-block; padding: 0.75rem 1rem; border-radius: 12px;
+      background: var(--surface2); border: 1px solid var(--border); text-align: left;
+      font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);
+    }
+    .genie-msg.user .genie-bubble { background: #0e4a72; border-color: #1a7ab8; color: #e8f4fc; }
+    .genie-meta { color: var(--muted); font-size: 0.72rem; margin-top: 0.3rem; }
+    .genie-sql {
+      margin-top: 0.5rem; padding: 0.6rem; background: #060d18; border-radius: 8px;
+      font-family: ui-monospace, monospace; font-size: 0.76rem; white-space: pre-wrap; color: #9ecbff;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .chip {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.8rem; cursor: pointer;
+    }
+    .chip:hover { border-color: var(--accent); background: rgba(0,168,232,.1); }
+    .genie-input-row { display: flex; gap: 0.65rem; }
+    .genie-input-row input {
+      flex: 1; padding: 0.65rem 0.85rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    }
+
+    /* Agent triage (AgentBricks pattern) */
+    .agent-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 1100px) { .agent-split { grid-template-columns: 1fr; } }
+    .agent-chat {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem; min-height: 360px; max-height: 480px; overflow-y: auto;
+    }
+    .agent-msg { margin-bottom: 0.85rem; font-size: 0.85rem; }
+    .agent-msg.user { text-align: right; }
+    .agent-msg.user .agent-bubble { background: #0e4a72; border-color: #1a7ab8; }
+    .agent-bubble {
+      display: inline-block; max-width: 95%; padding: 0.65rem 0.85rem; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary);
+      line-height: 1.45;
+    }
+    .agent-bubble strong { color: var(--text); }
+    .agent-tool { font-size: 0.68rem; color: var(--accent); text-transform: uppercase; margin-bottom: 0.25rem; }
+    .agent-approval {
+      border: 2px solid #ffb74d; background: rgba(255,183,77,.08); border-radius: 10px;
+      padding: 1rem; margin-top: 1rem;
+    }
+    .agent-approval h4 { margin: 0 0 0.5rem; color: #ffcc80; font-size: 0.9rem; }
+    .agent-approval-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .agent-warn { color: #ffb74d; font-size: 0.78rem; margin-top: 0.35rem; }
+
+    /* Live demo */
+    .live-banner {
+      background: var(--surface2); border: 1px dashed var(--border); border-radius: 10px;
+      padding: 0.85rem 1rem; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;
+    }
+    .live-banner strong { color: var(--text); }
+    .job-log {
+      background: #060d18; border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.85rem 1rem; font-family: ui-monospace, monospace; font-size: 0.78rem;
+      color: #9ecbff; min-height: 4rem; white-space: pre-wrap;
+    }
+    .pulse { animation: pulse .6s ease; }
+    @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
+    .auto-badge { color: var(--ok); font-weight: 600; font-size: 0.78rem; }
+
+    .pipeline-flow { margin: 0; padding: 0; background: transparent; border: none; }
+    .pipeline-table { width: 100%; font-size: 0.82rem; }
+    .pipeline-table th { font-size: 0.68rem; padding: 0.55rem 0.75rem; }
+    .pipeline-table td { padding: 0.6rem 0.75rem; vertical-align: middle; }
+    .pipeline-table tr.pipe-row.done td { background: rgba(76,175,80,.08); }
+    .pipeline-table tr.pipe-row.active td { background: rgba(51,189,245,.1); }
+    .pipeline-table tr.pipe-row.fail td { background: rgba(255,82,82,.1); }
+    .pipe-status {
+      display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .pipe-status.pending { background: rgba(144,164,174,.15); color: var(--muted); }
+    .pipe-status.active { background: rgba(51,189,245,.2); color: #7dd3fc; }
+    .pipe-status.done { background: rgba(76,175,80,.2); color: #81c784; }
+    .pipe-status.fail { background: rgba(255,82,82,.2); color: #ff8a80; }
+    .job-meta { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.35rem; }
+    .job-msg { font-size: 0.78rem; color: var(--muted); }
+    .pipe-step {
+      display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem;
+      padding: 0.35rem 0.65rem; border-radius: 999px; background: var(--surface);
+      border: 1px solid var(--border); color: var(--muted);
+    }
+    .pipe-step.active { border-color: var(--accent); color: var(--accent); background: rgba(0,168,232,.12); }
+    .pipe-step.done { border-color: var(--ok); color: #81c784; background: rgba(76,175,80,.1); }
+    .pipe-step.fail { border-color: var(--p1); color: #ff8a80; }
+    .pipe-arrow { color: var(--muted); font-size: 0.75rem; }
+    .scenario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.65rem; margin-bottom: 1rem; }
+    .scenario-card {
+      background: var(--surface2); border: 2px solid var(--border); border-radius: 10px;
+      padding: 0.85rem; cursor: pointer; transition: all .15s; text-align: left;
+      color: var(--text); font-family: inherit; font-size: inherit;
+    }
+    .scenario-card:hover { border-color: var(--accent); background: #1e3550; }
+    .scenario-card.selected { border-color: var(--accent); background: rgba(51,189,245,.12); }
+    .scenario-card strong { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; color: var(--text); }
+    .scenario-card span { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.35; }
+    .lakebase-panel { margin-top: 1.25rem; }
+    .job-link { font-size: 0.78rem; color: var(--accent); word-break: break-all; }
+
+    .empty { padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.88rem; }
+    .error { color: #ff8a80; }
+    .toast {
+      position: fixed; bottom: 1.25rem; right: 1.25rem; background: var(--ok); color: #fff;
+      padding: 0.75rem 1.1rem; border-radius: 10px; display: none; z-index: 200;
+      font-size: 0.88rem; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    .loading-shimmer { color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">ATT <span>SDP</span></div>
+      <div class="brand-sub">Service Delivery Platform<br>Foundry → Databricks</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item {{ 'active' if active_tab == 'dashboard' else '' }}" data-tab="dashboard">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </button>
+      <button class="nav-item {{ 'active' if active_tab == 'dispatch' else '' }}" data-tab="dispatch">
+        <span class="nav-icon">🚨</span><span>Dispatch</span>
+      </button>
+      <button class="nav-item {{ 'active' if active_tab == 'agent' else '' }}" data-tab="agent">
+        <span class="nav-icon">🤖</span><span>Agent Triage</span>
+      </button>
+      <button class="nav-item {{ 'active' if active_tab == 'live' else '' }}" data-tab="live">
+        <span class="nav-icon">⚡</span><span>Live Demo</span>
+      </button>
+      <button class="nav-item {{ 'active' if active_tab == 'genie' else '' }}" data-tab="genie">
+        <span class="nav-icon">✨</span><span>Genie</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="live-dot"></span>Live · {{ catalog }}.{{ schema }}<br>
+      Lakebase: {{ lakebase_project }}
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="page-title">Executive Dashboard</h2>
+        <p id="page-sub">Network incident & service fulfillment operations</p>
+      </div>
+      <div class="topbar-actions">
+        <span id="last-refreshed" style="font-size:0.78rem;color:var(--muted)"></span>
+        <button class="btn btn-primary" id="global-refresh">↻ Refresh</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- DASHBOARD -->
+      <section id="panel-dashboard" class="panel {{ 'active' if active_tab == 'dashboard' else '' }}">
+        <div class="demo-guide">
+          <h3>🎯 Demo playbook — 4-minute flow</h3>
+          <div class="demo-steps">
+            <div class="demo-step" data-goto="dashboard"><strong>1 · Overview</strong>Review KPIs and market health on this dashboard.</div>
+            <div class="demo-step" data-goto="live"><strong>2 · Ingest</strong>Live Demo → Write + Refresh to append streaming incidents (~3–5 min).</div>
+            <div class="demo-step" data-goto="dispatch"><strong>3 · Operate</strong>Dispatch → update incident status (Lakebase writeback).</div>
+            <div class="demo-step" data-goto="agent"><strong>4 · Agent</strong>Agent Triage → search → recommend → approve dispatch.</div>
+            <div class="demo-step" data-goto="genie"><strong>5 · Analyze</strong>Genie → ask "How many P1 incidents in Dallas?"</div>
+          </div>
+        </div>
+        <div class="kpi-grid" id="dash-kpis">
+          <div class="kpi-card"><div class="kpi-label">Open incidents</div><div class="kpi-value" id="dk-open">—</div></div>
+          <div class="kpi-card alert"><div class="kpi-label">P1 critical</div><div class="kpi-value" id="dk-p1">—</div></div>
+          <div class="kpi-card warn"><div class="kpi-label">Orders provisioning</div><div class="kpi-value" id="dk-orders">—</div></div>
+          <div class="kpi-card ok"><div class="kpi-label">Techs available</div><div class="kpi-value" id="dk-techs">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Stream feed</div><div class="kpi-value" id="dk-stream">—</div><div class="kpi-sub">INC-L* / INC-S*</div></div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Open incidents by market</div><div class="card-sub">Includes writeback status overlay</div></div></div>
+            <div class="bar-chart" id="dash-markets"><div class="loading-shimmer">Loading…</div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div class="card-title">By severity</div></div>
+            <div class="bar-chart" id="dash-severity"><div class="loading-shimmer">Loading…</div></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><div class="card-title">Recent incidents</div><div class="card-sub">Latest across all markets</div></div>
+            <div class="table-wrap" id="dash-recent"><div class="empty">Loading…</div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div class="card-title">Field technicians</div><div class="card-sub">Availability by market</div></div>
+            <div class="bar-chart" id="dash-techs"><div class="loading-shimmer">Loading…</div></div>
+            <div style="margin-top:1rem">
+              <div class="card-head" style="margin-bottom:0.5rem"><div class="card-title">Orders in provisioning</div></div>
+              <div id="dash-orders"><div class="loading-shimmer">Loading…</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DISPATCH -->
+      <section id="panel-dispatch" class="panel {{ 'active' if active_tab == 'dispatch' else '' }}">
+        <div class="kpi-grid" style="margin-bottom:1rem">
+          <div class="kpi-card alert"><div class="kpi-label">Open P1</div><div class="kpi-value" id="kpi-p1">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Total open</div><div class="kpi-value" id="kpi-open">—</div></div>
+          <div class="kpi-card ok"><div class="kpi-label">Techs ready</div><div class="kpi-value" id="kpi-techs">—</div></div>
+        </div>
+        <div class="toolbar">
+          <label>Market <select id="market"><option value="">All</option><option value="DALLAS">Dallas</option><option value="ATLANTA">Atlanta</option><option value="CHICAGO">Chicago</option></select></label>
+          <label>Severity <select id="severity"><option value="">All</option><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select></label>
+          <button class="btn btn-primary" id="refresh-board">Refresh board</button>
+        </div>
+
+        <div class="path-panel">
+          <div class="card-title">⚡ Data path — Lakebase vs SQL Warehouse latency</div>
+          <div class="path-toggles">
+            <label>Read ops overlay
+              <div class="seg-control" id="read-path-toggle">
+                <button type="button" class="seg active" data-value="lakebase">Lakebase Postgres</button>
+                <button type="button" class="seg" data-value="warehouse">SQL Warehouse</button>
+              </div>
+            </label>
+            <label>Write status update
+              <div class="seg-control" id="write-path-toggle">
+                <button type="button" class="seg active" data-value="lakebase">Lakebase Postgres</button>
+                <button type="button" class="seg" data-value="warehouse">SQL Warehouse</button>
+              </div>
+            </label>
+          </div>
+          <div class="latency-strip">
+            <span>Last read: <span class="lat-val" id="lat-read-ms">—</span> ms
+              <span class="lat-path" id="lat-read-path">(ops overlay)</span></span>
+            <span>Last write: <span class="lat-val" id="lat-write-ms">—</span> ms
+              <span class="lat-path" id="lat-write-path">(status PATCH)</span></span>
+            <span>Board query: <span class="lat-val" id="lat-board-ms">—</span> ms</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head">
+            <div class="card-title">Insert simulation — <code>lakebase_latency_demo</code></div>
+            <div class="toolbar" style="margin:0">
+              <button type="button" class="btn btn-sm btn-primary" id="sim-lakebase">Insert via Lakebase</button>
+              <button type="button" class="btn btn-sm" id="sim-warehouse">Insert via Warehouse</button>
+              <button type="button" class="btn btn-sm" id="sim-compare">Compare both</button>
+              <button type="button" class="btn btn-sm" id="sim-refresh">Refresh table</button>
+            </div>
+          </div>
+          <p style="font-size:0.78rem;color:var(--muted);margin:0 0 0.75rem;padding:0 1rem">
+            Each click inserts a row and measures end-to-end write latency. Lakebase typically completes in single-digit ms;
+            SQL Warehouse MERGE is slower (warehouse spin-up + Delta commit).
+          </p>
+          <div id="sim-compare-banner" style="display:none;padding:0 1rem 0.75rem;font-size:0.82rem;color:var(--ok)"></div>
+          <div class="table-wrap" id="latency-sim-table"><div class="empty loading-shimmer">Loading simulation history…</div></div>
+        </div>
+
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem">
+          Toggle read/write path above, then click a status button — latency appears in the sync bar.
+        </p>
+        <div id="dispatch-sync" class="dispatch-sync"></div>
+        <div id="board"><div class="empty">Loading dispatch board…</div></div>
+      </section>
+
+      <!-- AGENT TRIAGE -->
+      <section id="panel-agent" class="panel {{ 'active' if active_tab == 'agent' else '' }}">
+        <div class="demo-guide" style="margin-bottom:1.25rem">
+          <h3>🤖 Agent Triage — ex-Foundry AIP / AgentBricks</h3>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;margin:0">
+            Agent searches UC gold tables, recommends technicians, then <strong>requests human approval</strong>
+            before writing to <code>bridge_incident_technician</code> + ops writeback. All tool calls logged to
+            <code>agent_audit_log</code>.
+          </p>
+        </div>
+        <div class="chips" style="margin-bottom:1rem">
+          <button type="button" class="chip" id="agent-run-demo">▶ Run full demo flow</button>
+          <button type="button" class="chip" data-agent-step="search">Search open P1 in Dallas</button>
+          <button type="button" class="chip" data-agent-step="recommend">Recommend technician</button>
+          <button type="button" class="chip" data-agent-step="propose">Propose INC-9001 → TECH-201</button>
+        </div>
+        <div class="agent-split">
+          <div>
+            <div class="card-title" style="margin-bottom:0.5rem">Agent conversation</div>
+            <div class="agent-chat" id="agent-chat">
+              <div class="agent-msg">
+                <div class="agent-bubble">
+                  Ready. Run the <strong>full demo flow</strong> or use the prompt chips —
+                  search → recommend → propose → <strong>your approval</strong> → write.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card-title" style="margin-bottom:0.5rem">Tool results</div>
+            <div class="table-wrap" id="agent-results"><div class="empty">Agent results appear here</div></div>
+            <div id="agent-approval" style="display:none"></div>
+            <div class="card" style="margin-top:1rem">
+              <div class="card-head"><div class="card-title">Audit log</div></div>
+              <div class="table-wrap" id="agent-audit"><div class="empty loading-shimmer">Loading audit…</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIVE DEMO -->
+      <section id="panel-live" class="panel {{ 'active' if active_tab == 'live' else '' }}">
+        <div class="demo-guide" style="margin-bottom:1.25rem">
+          <h3>⚡ Live pipeline — Bronze → DLT → Semantic → Lakebase → App</h3>
+          <div class="demo-steps">
+            <div class="demo-step"><strong>1 · Pick scenario</strong>Select synthetic NOC event below.</div>
+            <div class="demo-step"><strong>2 · Run job</strong>Triggers Databricks workflow (~3–5 min).</div>
+            <div class="demo-step"><strong>3 · Watch steps</strong>Pipeline progress table updates in job order.</div>
+            <div class="demo-step"><strong>4 · Verify Lakebase</strong>New rows appear in ops feed + KPIs.</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-head"><div class="card-title">1 · Choose synthetic data scenario</div></div>
+          <div class="scenario-grid" id="scenario-grid"><div class="loading-shimmer">Loading scenarios…</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-head"><div class="card-title">2 · Trigger workflow</div></div>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="live-trigger">▶ Add live data + refresh</button>
+            <button class="btn" id="semantic-trigger">↻ Rebuild semantic layer</button>
+            <button class="btn" id="live-refresh">Refresh all</button>
+            <label style="font-size:0.85rem;color:var(--text-secondary)"><input type="checkbox" id="live-auto" checked /> Auto-poll</label>
+          </div>
+          <p style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem">
+            <strong>Live:</strong> sdp_write_refresh ·
+            <strong>Semantic:</strong>
+            <a class="job-link" href="{{ workspace_host }}/jobs/330013881006976?o={{ workspace_id }}" target="_blank">sdp_semantic_setup</a>
+          </p>
+        </div>
+
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-head"><div class="card-title">3 · Pipeline progress</div></div>
+          <div class="table-wrap pipeline-flow" id="pipeline-steps-wrap">
+            <div id="pipeline-steps"><div class="empty">No job running — trigger workflow above</div></div>
+          </div>
+          <div id="live-status" style="font-size:0.82rem;color:var(--muted);margin-top:0.75rem">Ready</div>
+          <div class="job-log" id="live-job-log" style="margin-top:0.75rem">No job run yet.</div>
+          <a id="live-run-link" class="job-link" href="#" target="_blank" style="display:none;margin-top:0.5rem">Open run in Databricks →</a>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">Open</div><div class="kpi-value" id="live-kpi-open">—</div></div>
+          <div class="kpi-card alert"><div class="kpi-label">P1</div><div class="kpi-value" id="live-kpi-p1">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Stream rows</div><div class="kpi-value" id="live-kpi-stream">—</div></div>
+          <div class="kpi-card warn"><div class="kpi-label">Provisioning</div><div class="kpi-value" id="live-kpi-orders">—</div></div>
+          <div class="kpi-card ok"><div class="kpi-label">Lakebase ops</div><div class="kpi-value" id="live-kpi-lakebase">—</div></div>
+        </div>
+
+        <div class="grid-2" style="margin-top:1.25rem">
+          <div class="card"><div class="card-title" style="margin-bottom:0.75rem">Gold — stream incidents</div><div class="table-wrap" id="live-recent"><div class="empty">No stream data yet</div></div></div>
+          <div class="card lakebase-panel">
+            <div class="card-title" style="margin-bottom:0.75rem">Lakebase — service_incident_ops_pg</div>
+            <div class="table-wrap" id="live-lakebase"><div class="empty loading-shimmer">Loading Lakebase feed…</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1.25rem">
+          <div class="card-title" style="margin-bottom:0.75rem">Open incidents by market</div>
+          <div class="bar-chart" id="live-markets"></div>
+        </div>
+      </section>
+
+      <!-- GENIE -->
+      <section id="panel-genie" class="panel {{ 'active' if active_tab == 'genie' else '' }}">
+        <div class="genie-split">
+          <div class="genie-chat-col">
+            <p style="color:var(--muted); margin:0; font-size:0.85rem">
+              Ask anything — Genie returns KPIs, charts, tables &amp; SQL. Results auto-render as dashboards.
+              <a href="{{ workspace_host }}/genie/rooms/{{ genie_space_id }}?o={{ workspace_id }}" target="_blank" style="margin-left:0.35rem">Open Genie Space →</a>
+            </p>
+            <div class="chips">
+              <button class="chip" data-q="How many P1 incidents are open in Dallas?">P1 Dallas</button>
+              <button class="chip" data-q="Give me the current SDP executive summary">Executive KPIs</button>
+              <button class="chip" data-q="Compare open incidents across all markets">Bar chart — markets</button>
+              <button class="chip" data-q="Show open incident counts by severity">Pie — severity</button>
+              <button class="chip" data-q="List all dispatched P2 incidents with assigned technicians">Dispatch table</button>
+              <button class="chip" data-q="How many orders are stuck in provisioning by market?">Orders by market</button>
+              <button class="chip" data-q="Show technician utilization by market and skill level">Tech utilization</button>
+              <button class="chip" data-q="What is average MTTR for fiber incidents by market?">MTTR trend</button>
+            </div>
+            <div class="genie-chat" id="genie-chat" style="flex:1">
+              <div class="genie-msg"><div class="genie-bubble">Results appear in the <strong>Live dashboard</strong> panel → charts, KPI cards, and tables based on your question.</div></div>
+            </div>
+            <div class="genie-input-row">
+              <input id="genie-input" type="text" placeholder="Ask Genie… e.g. Compare open P1 incidents across markets" />
+              <button class="btn btn-primary" id="genie-send">Ask</button>
+            </div>
+          </div>
+          <div class="genie-dash-col">
+            <h3>📊 Live dashboard</h3>
+            <div id="genie-dashboard"><div class="empty">Ask a question to generate charts &amp; KPIs</div></div>
+            <div class="mlflow-badge" id="mlflow-badge">
+              MLflow tracking: <span id="mlflow-status">loading…</span>
+              {% if mlflow_experiment_url %} · <a href="{{ mlflow_experiment_url }}" target="_blank">View experiment →</a>{% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    const TITLES = {
+      dashboard: ['Executive Dashboard', 'Network incident & service fulfillment operations'],
+      dispatch: ['Incident Dispatch', 'Lakebase vs Warehouse latency · Toggle read/write path · {{ catalog }}.{{ schema }}'],
+      agent: ['Agent Triage', 'AgentBricks pattern · Search → Recommend → Approve → Write'],
+      live: ['Live Demo', 'Synthetic data → Semantic layer → Lakebase → App'],
+      genie: ['Genie Analytics', 'Auto dashboards · Charts · KPIs · MLflow tracked'],
+    };
+
+    let activeTab = '{{ active_tab }}';
+    let genieConversationId = null;
+    let livePollTimer = null, liveJobPollTimer = null, liveFastPollTimer = null;
+    let liveJobRunId = null;
+    let selectedScenario = 'new_p1_dallas';
+    let pipelineSteps = [];
+    let agentContext = { market: 'DALLAS', incident_id: null, technician_id: null };
+    let agentPending = null;
+    const prevLive = {};
+    let incidentCache = [];
+    const pendingUpdates = new Set();
+    const OPEN_STATUSES = ['OPEN', 'IN_PROGRESS', 'DISPATCHED'];
+    let dispatchReadPath = localStorage.getItem('sdp_read_path') || 'lakebase';
+    let dispatchWritePath = localStorage.getItem('sdp_write_path') || 'lakebase';
+    let lastReadMs = null;
+    let lastWriteMs = null;
+    let lastBoardMs = null;
+
+    function pathLabel(p) {
+      return p === 'warehouse' ? 'SQL Warehouse' : 'Lakebase Postgres';
+    }
+
+    function latClass(ms, path) {
+      if (ms == null) return '';
+      if (path === 'lakebase' && ms < 50) return 'fast';
+      if (path === 'warehouse' && ms > 200) return 'slow';
+      if (path === 'lakebase' && ms >= 50) return 'slow';
+      return 'fast';
+    }
+
+    function updateLatencyStrip() {
+      const rEl = document.getElementById('lat-read-ms');
+      const wEl = document.getElementById('lat-write-ms');
+      const bEl = document.getElementById('lat-board-ms');
+      const rp = document.getElementById('lat-read-path');
+      const wp = document.getElementById('lat-write-path');
+      if (rEl) {
+        rEl.textContent = lastReadMs != null ? lastReadMs : '—';
+        rEl.className = 'lat-val ' + latClass(lastReadMs, dispatchReadPath);
+      }
+      if (wEl) {
+        wEl.textContent = lastWriteMs != null ? lastWriteMs : '—';
+        wEl.className = 'lat-val ' + latClass(lastWriteMs, dispatchWritePath);
+      }
+      if (bEl) bEl.textContent = lastBoardMs != null ? lastBoardMs : '—';
+      if (rp) rp.textContent = `(${pathLabel(dispatchReadPath)} overlay)`;
+      if (wp) wp.textContent = `(${pathLabel(dispatchWritePath)} PATCH)`;
+    }
+
+    function initPathToggles() {
+      ['read', 'write'].forEach(kind => {
+        const wrap = document.getElementById(kind + '-path-toggle');
+        if (!wrap) return;
+        const current = kind === 'read' ? dispatchReadPath : dispatchWritePath;
+        wrap.querySelectorAll('.seg').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.value === current);
+          btn.addEventListener('click', () => {
+            wrap.querySelectorAll('.seg').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (kind === 'read') {
+              dispatchReadPath = btn.dataset.value;
+              localStorage.setItem('sdp_read_path', dispatchReadPath);
+              loadIncidents();
+            } else {
+              dispatchWritePath = btn.dataset.value;
+              localStorage.setItem('sdp_write_path', dispatchWritePath);
+            }
+            updateLatencyStrip();
+          });
+        });
+      });
+      updateLatencyStrip();
+    }
+
+    function pathBadge(path) {
+      const cls = path === 'lakebase' ? 'lb' : 'wh';
+      const label = path === 'lakebase' ? 'Lakebase' : 'Warehouse';
+      return `<span class="lat-badge ${cls}">${label}</span>`;
+    }
+
+    async function loadLatencyHistory() {
+      const el = document.getElementById('latency-sim-table');
+      if (!el) return;
+      try {
+        const d = await (await fetch('/api/latency/history?limit=20')).json();
+        const rows = d.items || [];
+        if (!rows.length) {
+          el.innerHTML = '<div class="empty">No simulation runs yet — click Insert via Lakebase or Compare both</div>';
+          return;
+        }
+        el.innerHTML = `<table><thead><tr>
+          <th>Time</th><th>Operation</th><th>Path</th><th>Latency</th><th>Detail</th><th>Table</th>
+        </tr></thead><tbody>${rows.map(r => `<tr>
+          <td style="font-size:0.78rem">${(r.created_at || '—').replace('T',' ').slice(0,19)}</td>
+          <td>${r.operation || '—'}</td>
+          <td>${pathBadge(r.path)}</td>
+          <td><strong style="font-variant-numeric:tabular-nums;color:${r.path==='lakebase'?'var(--ok)':'var(--warn)'}">${r.latency_ms ?? '—'} ms</strong></td>
+          <td style="font-size:0.78rem;color:var(--muted)">${(r.detail || '—').slice(0,40)}</td>
+          <td style="font-size:0.72rem"><code>${r.path === 'lakebase' ? (d.lakebase_table || 'lakebase') : (d.warehouse_table || 'uc')}</code></td>
+        </tr>`).join('')}</tbody></table>`;
+      } catch (e) {
+        el.innerHTML = '<div class="error empty">Failed to load simulation history</div>';
+      }
+    }
+
+    async function runLatencySim(path) {
+      const btn = document.getElementById(path === 'lakebase' ? 'sim-lakebase' : 'sim-warehouse');
+      if (btn) { btn.disabled = true; btn.textContent = 'Running…'; }
+      try {
+        const r = await fetch('/api/latency/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, operation: 'insert', label: `manual_${path}_${Date.now()}` }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Simulation failed');
+        showToast(`${pathLabel(path)} insert: ${d.latency_ms} ms`);
+        await loadLatencyHistory();
+      } catch (e) {
+        showToast(e.message || 'Simulation failed');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = path === 'lakebase' ? 'Insert via Lakebase' : 'Insert via Warehouse';
+        }
+      }
+    }
+
+    async function runLatencyCompare() {
+      const btn = document.getElementById('sim-compare');
+      const banner = document.getElementById('sim-compare-banner');
+      if (btn) { btn.disabled = true; btn.textContent = 'Comparing…'; }
+      try {
+        const r = await fetch('/api/latency/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label: `compare_${Date.now()}` }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Compare failed');
+        if (banner) {
+          banner.style.display = 'block';
+          const sp = d.speedup_factor ? ` · Warehouse is ~${d.speedup_factor}× slower` : '';
+          banner.textContent = `Lakebase ${d.lakebase_ms ?? '?'} ms vs Warehouse ${d.warehouse_ms ?? '?'} ms${sp}`;
+        }
+        showToast(`Compare: LB ${d.lakebase_ms}ms · WH ${d.warehouse_ms}ms`);
+        await loadLatencyHistory();
+      } catch (e) {
+        showToast(e.message || 'Compare failed');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Compare both'; }
+      }
+    }
+
+    function showToast(msg, ms = 3500) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => { t.style.display = 'none'; }, ms);
+    }
+
+    function setDispatchSync(text, state) {
+      const el = document.getElementById('dispatch-sync');
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'dispatch-sync' + (state ? ' ' + state : '');
+    }
+
+    function bumpKpi(id, delta) {
+      const el = document.getElementById(id);
+      if (!el || !delta) return;
+      const n = parseInt(String(el.textContent).replace(/[^\d-]/g, ''), 10);
+      if (isNaN(n)) return;
+      el.textContent = Math.max(0, n + delta);
+      el.classList.remove('pulse');
+      void el.offsetWidth;
+      el.classList.add('pulse');
+    }
+
+    function adjustKpisOptimistic(incident, prevStatus, newStatus) {
+      const wasOpen = OPEN_STATUSES.includes(prevStatus);
+      const nowOpen = OPEN_STATUSES.includes(newStatus);
+      if (wasOpen && !nowOpen) {
+        bumpKpi('kpi-open', -1);
+        if (incident?.severity === 'P1') bumpKpi('kpi-p1', -1);
+      } else if (!wasOpen && nowOpen) {
+        bumpKpi('kpi-open', 1);
+        if (incident?.severity === 'P1') bumpKpi('kpi-p1', 1);
+      }
+    }
+
+    function findIncidentRow(id) {
+      return document.querySelector(`tr[data-incident-id="${CSS.escape(id)}"]`);
+    }
+
+    function applyStatusToRow(id, status, { pending = false, saved = false, error = false } = {}) {
+      const row = findIncidentRow(id);
+      if (!row) return;
+      row.classList.toggle('row-updating', pending);
+      row.classList.toggle('row-saved', saved);
+      row.classList.toggle('row-error', error);
+      const pillCell = row.querySelector('[data-status-pill]');
+      if (pillCell) pillCell.innerHTML = pill('st', status);
+      row.querySelectorAll('button[data-st]').forEach(b => {
+        const active = b.dataset.st === status;
+        b.classList.toggle('btn-primary', active);
+        b.disabled = pending;
+        b.classList.toggle('btn-pending', pending && active);
+      });
+    }
+
+    function removeIncidentRow(id) {
+      const row = findIncidentRow(id);
+      if (!row) return;
+      row.classList.add('row-exit');
+      setTimeout(() => {
+        row.remove();
+        const board = document.getElementById('board');
+        if (board && !board.querySelector('tbody tr')) {
+          board.innerHTML = '<div class="empty">No open incidents match filters.</div>';
+        }
+      }, 180);
+    }
+
+    function pill(sevOrStatus, val) {
+      return `<span class="pill pill-${val}">${val}</span>`;
+    }
+
+    function renderBars(containerId, items, labelKey, valueKey, opts = {}) {
+      const el = document.getElementById(containerId);
+      if (!items || !items.length) {
+        el.innerHTML = '<div class="empty">No data</div>';
+        return;
+      }
+      const max = Math.max(...items.map(i => Number(i[valueKey]) || 0), 1);
+      el.innerHTML = items.map(i => {
+        const v = Number(i[valueKey]) || 0;
+        const pct = Math.round((v / max) * 100);
+        const cls = opts.p1Key && Number(i[opts.p1Key]) > 0 ? ' p1' : '';
+        const sub = opts.p1Key && i[opts.p1Key] ? ` <span style="color:var(--p1);font-size:0.72rem">(${i[opts.p1Key]} P1)</span>` : '';
+        return `<div class="bar-row"><span class="bar-label">${i[labelKey]}</span><div class="bar-track"><div class="bar-fill${cls}" style="width:${pct}%"></div></div><span class="bar-val">${v}${sub}</span></div>`;
+      }).join('');
+    }
+
+    function switchTab(name) {
+      activeTab = name;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === name));
+      document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+      const [title, sub] = TITLES[name] || TITLES.dashboard;
+      document.getElementById('page-title').textContent = title;
+      document.getElementById('page-sub').textContent = sub;
+      history.replaceState(null, '', name === 'dashboard' ? '/' : '/' + name);
+      if (name === 'live') { loadLiveScenarios(); startLivePolling(); }
+      else stopLivePolling();
+      if (name === 'dashboard') loadDashboard();
+      if (name === 'dispatch') { loadKpis(); loadIncidents(); loadLatencyHistory(); }
+      if (name === 'genie') loadMlflowStatus();
+      if (name === 'agent') loadAgentAudit();
+    }
+
+    document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => switchTab(n.dataset.tab)));
+    document.querySelectorAll('.demo-step[data-goto]').forEach(s => s.addEventListener('click', () => switchTab(s.dataset.goto)));
+
+    async function loadDashboard() {
+      try {
+        const r = await fetch('/api/dashboard');
+        const d = await r.json();
+        document.getElementById('dk-open').textContent = d.kpis?.total_open_incidents ?? '0';
+        document.getElementById('dk-p1').textContent = d.kpis?.open_p1_incidents ?? '0';
+        document.getElementById('dk-orders').textContent = d.kpis?.orders_in_provisioning ?? '0';
+        document.getElementById('dk-techs').textContent = d.kpis?.available_technicians ?? '0';
+        document.getElementById('dk-stream').textContent = d.kpis?.stream_incidents ?? '0';
+        renderBars('dash-markets', d.markets, 'market', 'open_count', { p1Key: 'p1_count' });
+        renderBars('dash-severity', d.severity, 'severity', 'incident_count');
+        renderBars('dash-techs', d.technicians, 'market', 'available_count');
+        const ordersEl = document.getElementById('dash-orders');
+        if (!d.orders?.length) ordersEl.innerHTML = '<div class="empty">No orders in provisioning</div>';
+        else ordersEl.innerHTML = d.orders.map(o => `<div class="bar-row"><span class="bar-label">${o.market}</span><div class="bar-track"><div class="bar-fill" style="width:60%"></div></div><span class="bar-val">${o.order_count}</span></div>`).join('');
+        const recent = d.recent_incidents || [];
+        const recEl = document.getElementById('dash-recent');
+        if (!recent.length) recEl.innerHTML = '<div class="empty">No incidents</div>';
+        else recEl.innerHTML = `<table><thead><tr><th>ID</th><th>Title</th><th>Sev</th><th>Market</th><th>Status</th></tr></thead><tbody>${recent.map(i => `<tr><td><code>${i.incident_id}</code></td><td>${(i.title||'—').slice(0,40)}</td><td>${pill('sev',i.severity)}</td><td>${i.market}</td><td>${pill('st',i.incident_status)}</td></tr>`).join('')}</tbody></table>`;
+        document.getElementById('last-refreshed').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        showToast('Dashboard load failed');
+      }
+    }
+
+    async function loadKpis() {
+      const r = await fetch('/api/kpis');
+      const d = await r.json();
+      ['kpi-open','kpi-p1','kpi-techs'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const key = id.replace('kpi-','').replace('open','total_open_incidents').replace('p1','open_p1_incidents').replace('techs','available_technicians');
+        el.textContent = d[key] ?? d[id.replace('kpi-','')] ?? '0';
+      });
+      const openEl = document.getElementById('kpi-open');
+      if (openEl) openEl.textContent = d.total_open_incidents ?? '0';
+      const p1El = document.getElementById('kpi-p1');
+      if (p1El) p1El.textContent = d.open_p1_incidents ?? '0';
+      const techEl = document.getElementById('kpi-techs');
+      if (techEl) techEl.textContent = d.available_technicians ?? '0';
+    }
+
+    async function updateIncident(id, status, btn) {
+      if (pendingUpdates.has(id)) return;
+      const idx = incidentCache.findIndex(i => i.incident_id === id);
+      const incident = idx >= 0 ? incidentCache[idx] : null;
+      const prevStatus = incident?.incident_status;
+      if (prevStatus === status) return;
+
+      pendingUpdates.add(id);
+
+      if (idx >= 0) {
+        if (status === 'RESOLVED') {
+          incidentCache.splice(idx, 1);
+        } else {
+          incidentCache[idx] = { ...incidentCache[idx], incident_status: status };
+        }
+      }
+
+      if (status === 'RESOLVED') {
+        applyStatusToRow(id, status, { pending: true });
+        removeIncidentRow(id);
+      } else {
+        applyStatusToRow(id, status, { pending: true });
+      }
+      adjustKpisOptimistic(incident, prevStatus, status);
+      setDispatchSync(`Saving ${id} → ${status.replace('_', ' ')}…`, 'syncing');
+
+      try {
+        const r = await fetch('/api/incidents/' + encodeURIComponent(id), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, user: 'sdp_ops_console', write_path: dispatchWritePath }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Update failed');
+
+        if (status !== 'RESOLVED') {
+          applyStatusToRow(id, status, { pending: false, saved: true });
+          setTimeout(() => applyStatusToRow(id, status), 600);
+        }
+        lastWriteMs = d.latency_ms ?? null;
+        updateLatencyStrip();
+        const savedTo = d.path === 'lakebase_primary' ? 'Lakebase'
+          : d.path === 'warehouse_primary' ? 'SQL Warehouse'
+          : d.path === 'delta_writeback_fallback' ? 'UC (Lakebase unavailable)' : 'UC overlay';
+        const latTxt = d.latency_ms != null ? ` · ${d.latency_ms} ms` : '';
+        setDispatchSync(`✓ ${id} saved to ${savedTo}${latTxt}`, 'synced');
+        setTimeout(() => setDispatchSync(''), 2200);
+        showToast(`${id} → ${status.replace('_', ' ')}`, 1800);
+
+        loadKpis().catch(() => {});
+        if (activeTab === 'dashboard') loadDashboard().catch(() => {});
+      } catch (e) {
+        if (incident) {
+          if (status === 'RESOLVED') {
+            incidentCache.splice(idx >= 0 ? idx : incidentCache.length, 0, incident);
+            renderIncidents(incidentCache);
+          } else if (idx >= 0) {
+            incidentCache[idx] = incident;
+            applyStatusToRow(id, prevStatus, { pending: false, error: true });
+            setTimeout(() => applyStatusToRow(id, prevStatus), 600);
+          }
+        }
+        adjustKpisOptimistic(incident, status, prevStatus);
+        setDispatchSync(e.message || 'Update failed', 'error');
+        showToast(e.message || 'Update failed');
+      } finally {
+        pendingUpdates.delete(id);
+      }
+    }
+
+    function renderIncidents(items) {
+      incidentCache = items || [];
+      const board = document.getElementById('board');
+      if (!incidentCache.length) {
+        board.innerHTML = '<div class="empty">No open incidents match filters.</div>';
+        return;
+      }
+      board.innerHTML = `<div class="table-wrap"><table><thead><tr>
+        <th>ID</th><th>Incident</th><th>Sev</th><th>Market</th><th>Account</th><th>Status</th><th>Technician</th><th>Quick update</th>
+      </tr></thead><tbody>${incidentCache.map(i => `<tr data-incident-id="${i.incident_id}">
+        <td><code>${i.incident_id}</code></td>
+        <td>${(i.title||'—').slice(0,36)}</td>
+        <td>${pill('sev',i.severity)}</td>
+        <td>${i.market||'—'}</td>
+        <td style="font-size:0.8rem;color:var(--muted)">${(i.account_name||'—').slice(0,20)}</td>
+        <td data-status-pill>${pill('st',i.incident_status)}</td>
+        <td>${i.technician_name||'<span style="color:var(--muted)">Unassigned</span>'}</td>
+        <td><div class="btn-group">${['IN_PROGRESS','DISPATCHED','RESOLVED'].map(s =>
+          `<button type="button" class="btn btn-sm${i.incident_status===s?' btn-primary':''}" data-id="${i.incident_id}" data-st="${s}">${s.replace('_',' ')}</button>`
+        ).join('')}</div></td>
+      </tr>`).join('')}</tbody></table></div>`;
+      board.querySelectorAll('button[data-st]').forEach(btn => {
+        btn.addEventListener('click', () => updateIncident(btn.dataset.id, btn.dataset.st, btn));
+      });
+    }
+
+    async function loadIncidents(opts = {}) {
+      const { silent = false } = opts;
+      const board = document.getElementById('board');
+      if (!silent) board.innerHTML = '<div class="empty loading-shimmer">Loading…</div>';
+      const qs = new URLSearchParams();
+      const m = document.getElementById('market').value;
+      const s = document.getElementById('severity').value;
+      if (m) qs.set('market', m);
+      if (s) qs.set('severity', s);
+      qs.set('read_path', dispatchReadPath);
+      try {
+        const r = await fetch('/api/incidents?' + qs);
+        if (!r.ok) throw new Error('API');
+        const d = await r.json();
+        lastReadMs = d.ops_read_ms ?? d.latency_ms ?? null;
+        lastBoardMs = d.board_read_ms ?? null;
+        updateLatencyStrip();
+        renderIncidents(d.items || []);
+      } catch (e) {
+        board.innerHTML = '<div class="error empty">Failed to load board — check warehouse access.</div>';
+      }
+    }
+
+    function flashLive(id, val) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (prevLive[id] !== undefined && prevLive[id] !== val) {
+        el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+      }
+      prevLive[id] = val;
+      el.textContent = val;
+    }
+
+    async function loadLiveScenarios() {
+      try {
+        const d = await (await fetch('/api/live/scenarios')).json();
+        const grid = document.getElementById('scenario-grid');
+        grid.innerHTML = (d.scenarios || []).map(s =>
+          `<button type="button" class="scenario-card${s.id===selectedScenario?' selected':''}" data-id="${s.id}">
+            <strong>${s.label}</strong><span>${s.desc}</span>
+          </button>`
+        ).join('');
+        grid.querySelectorAll('.scenario-card').forEach(c => c.addEventListener('click', () => {
+          selectedScenario = c.dataset.id;
+          grid.querySelectorAll('.scenario-card').forEach(x => x.classList.toggle('selected', x.dataset.id === selectedScenario));
+        }));
+      } catch (e) { /* ignore */ }
+    }
+
+    function renderStepTable(containerId, stepDefs, taskRows, emptyMsg) {
+      const el = document.getElementById(containerId);
+      if (!stepDefs.length) {
+        el.innerHTML = `<div class="empty">${emptyMsg || 'No steps'}</div>`;
+        return;
+      }
+      const taskMap = {};
+      (taskRows || []).forEach(t => { taskMap[t.task_key || t.step] = t; });
+      const rows = stepDefs.map((s, i) => {
+        const key = s.key || s.step;
+        const t = taskMap[key];
+        let status = 'Pending', cls = 'pending';
+        if (t) {
+          const rs = t.result_state;
+          const lc = t.life_cycle_state || t.status;
+          if (rs === 'SUCCESS' || lc === 'done') { status = 'Complete'; cls = 'done'; }
+          else if (rs === 'FAILED' || lc === 'failed') { status = 'Failed'; cls = 'fail'; }
+          else if (lc === 'RUNNING' || lc === 'running') { status = 'Running'; cls = 'active'; }
+          else if (lc) { status = lc; cls = lc === 'done' ? 'done' : 'pending'; }
+        }
+        const detail = t?.detail ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem">${t.detail}</div>` : '';
+        return `<tr class="pipe-row ${cls}"><td>${i + 1}</td><td>${s.label || key}${detail}</td><td><code style="font-size:0.72rem">${key}</code></td><td><span class="pipe-status ${cls}">${status}</span></td></tr>`;
+      }).join('');
+      el.innerHTML = `<table class="pipeline-table"><thead><tr><th>#</th><th>Step</th><th>Task</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function renderPipelineSteps(tasks) {
+      renderStepTable('pipeline-steps', pipelineSteps, tasks, 'No job running — trigger workflow above');
+    }
+
+    function renderJobLog(runMeta) {
+      const log = document.getElementById('live-job-log');
+      if (!runMeta) { log.textContent = 'No job run yet.'; return; }
+      log.innerHTML = `<div class="job-meta">Run <strong>${runMeta.run_id}</strong> · ${runMeta.state}${runMeta.result ? ' / ' + runMeta.result : ''}</div><div class="job-msg">${(runMeta.message || '').replace(/</g,'&lt;')}</div>`;
+    }
+
+    async function loadLakebaseFeed() {
+      try {
+        const d = await (await fetch('/api/live/lakebase')).json();
+        document.getElementById('live-kpi-lakebase').textContent = d.lakebase_ops_count ?? '0';
+        const el = document.getElementById('live-lakebase');
+        const rows = d.pg_ops_rows || [];
+        if (!rows.length) el.innerHTML = '<div class="empty">No Lakebase ops rows — run pipeline first</div>';
+        else el.innerHTML = `<table><thead><tr><th>ID</th><th>Status</th><th>Updated</th><th>By</th></tr></thead><tbody>${rows.map(r=>`<tr><td><code>${r.incident_id}</code></td><td>${pill('st',r.status)}</td><td style="font-size:0.75rem">${(r.updated_at||'').slice(0,19)}</td><td style="font-size:0.75rem;color:var(--muted)">${r.updated_by||'—'}</td></tr>`).join('')}</tbody></table>`;
+      } catch (e) {
+        document.getElementById('live-lakebase').innerHTML = '<div class="error empty">Lakebase feed unavailable</div>';
+      }
+    }
+
+    async function loadLiveStats() {
+      try {
+        const d = await (await fetch('/api/live/stats')).json();
+        flashLive('live-kpi-open', d.total_open_incidents ?? '0');
+        flashLive('live-kpi-p1', d.open_p1_incidents ?? '0');
+        flashLive('live-kpi-stream', d.stream_incidents ?? '0');
+        flashLive('live-kpi-orders', d.orders_in_provisioning ?? '0');
+        if (d.lakebase) flashLive('live-kpi-lakebase', d.lakebase.ops_count ?? '0');
+        renderBars('live-markets', d.markets, 'market', 'open_count');
+        const el = document.getElementById('live-recent');
+        const items = d.recent_stream_incidents || [];
+        if (!items.length) el.innerHTML = '<div class="empty">No stream incidents — pick scenario & run job</div>';
+        else el.innerHTML = `<table><thead><tr><th>ID</th><th>Title</th><th>Sev</th><th>Market</th><th>Status</th></tr></thead><tbody>${items.map(i=>`<tr><td><code>${i.incident_id}</code></td><td>${(i.title||'').slice(0,32)}</td><td>${pill('sev',i.severity)}</td><td>${i.market}</td><td>${pill('st',i.status)}</td></tr>`).join('')}</tbody></table>`;
+        document.getElementById('live-status').innerHTML = `Gold updated <strong>${d.last_gold_update||'—'}</strong> · polled <strong>${d.polled_at||'—'}</strong>${document.getElementById('live-auto').checked?' · <span class="auto-badge">AUTO</span>':''}`;
+        await loadLakebaseFeed();
+      } catch (e) {
+        document.getElementById('live-status').innerHTML = '<span class="error">Stats unavailable</span>';
+      }
+    }
+
+    async function triggerLiveJob(workflow) {
+      const log = document.getElementById('live-job-log');
+      const label = workflow === 'semantic' ? 'sdp_semantic_setup' : 'sdp_write_refresh';
+      log.textContent = `Starting ${label}… (~3–5 min)`;
+      try {
+        const r = await fetch('/api/live/trigger', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: selectedScenario, workflow }),
+        });
+        const d = await r.json();
+        if (!r.ok) { log.textContent = 'Error: ' + (d.error||r.status) + (d.hint ? '\n'+d.hint : ''); return; }
+        liveJobRunId = d.run_id;
+        pipelineSteps = d.steps || [];
+        renderPipelineSteps([]);
+        renderJobLog({ run_id: d.run_id, state: 'PENDING', message: `Started ${d.job_name}` });
+        const link = document.getElementById('live-run-link');
+        if (d.run_url) { link.href = d.run_url; link.style.display = 'inline-block'; }
+        if (liveJobPollTimer) clearInterval(liveJobPollTimer);
+        liveFastPollTimer = setInterval(loadLiveStats, 2000);
+        liveJobPollTimer = setInterval(pollJobRun, 4000);
+        pollJobRun();
+        showToast('Job started — watch pipeline steps');
+      } catch (e) { log.textContent = 'Failed to trigger job.'; }
+    }
+
+    async function pollJobRun() {
+      if (!liveJobRunId) return;
+      try {
+        const d = await (await fetch('/api/live/run/' + liveJobRunId)).json();
+        renderPipelineSteps(d.tasks || []);
+        renderJobLog({ run_id: liveJobRunId, state: d.state, result: d.result, message: d.message });
+        if (d.run_url) { const l = document.getElementById('live-run-link'); l.href = d.run_url; l.style.display = 'inline-block'; }
+        loadLiveStats();
+        if (d.done) {
+          clearInterval(liveJobPollTimer); liveJobPollTimer = null; stopLiveFastPoll();
+          loadLiveStats(); loadDashboard();
+          showToast(d.success ? 'Pipeline complete — check Lakebase feed!' : 'Job finished with errors');
+        }
+      } catch (e) {}
+    }
+
+    function startLivePolling() {
+      stopLivePolling();
+      loadLiveStats();
+      if (document.getElementById('live-auto').checked) livePollTimer = setInterval(loadLiveStats, 5000);
+    }
+    function stopLivePolling() { if (livePollTimer) clearInterval(livePollTimer); livePollTimer = null; }
+    function stopLiveFastPoll() { if (liveFastPollTimer) clearInterval(liveFastPollTimer); liveFastPollTimer = null; }
+
+    document.getElementById('global-refresh').addEventListener('click', () => {
+      if (activeTab === 'dashboard') loadDashboard();
+      else if (activeTab === 'dispatch') { loadKpis(); loadIncidents(); }
+      else if (activeTab === 'live') loadLiveStats();
+      else loadDashboard();
+    });
+    document.getElementById('refresh-board').addEventListener('click', () => { loadKpis(); loadIncidents(); });
+    document.getElementById('sim-lakebase')?.addEventListener('click', () => runLatencySim('lakebase'));
+    document.getElementById('sim-warehouse')?.addEventListener('click', () => runLatencySim('warehouse'));
+    document.getElementById('sim-compare')?.addEventListener('click', runLatencyCompare);
+    document.getElementById('sim-refresh')?.addEventListener('click', loadLatencyHistory);
+    document.getElementById('market').addEventListener('change', loadIncidents);
+    document.getElementById('severity').addEventListener('change', loadIncidents);
+    document.getElementById('live-refresh').addEventListener('click', () => { loadLiveStats(); loadLakebaseFeed(); });
+    document.getElementById('live-auto').addEventListener('change', () => { if (activeTab==='live') startLivePolling(); });
+    document.getElementById('live-trigger').addEventListener('click', () => triggerLiveJob('live'));
+    document.getElementById('semantic-trigger').addEventListener('click', () => {
+      if (confirm('Rebuild semantic layer? This runs full DLT refresh + MV + Lakebase sync (~5–10 min).')) triggerLiveJob('semantic');
+    });
+
+    function appendAgent(role, tool, html) {
+      const chat = document.getElementById('agent-chat');
+      const w = document.createElement('div');
+      w.className = 'agent-msg' + (role === 'user' ? ' user' : '');
+      const toolLine = tool ? `<div class="agent-tool">${tool}</div>` : '';
+      w.innerHTML = `${toolLine}<div class="agent-bubble">${html}</div>`;
+      chat.appendChild(w);
+      chat.scrollTop = chat.scrollHeight;
+      return w;
+    }
+
+    function renderAgentTable(items, cols) {
+      const el = document.getElementById('agent-results');
+      if (!items?.length) { el.innerHTML = '<div class="empty">No rows returned</div>'; return; }
+      const keys = cols || Object.keys(items[0]);
+      el.innerHTML = `<table><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${
+        items.map(r => `<tr>${keys.map(k=>`<td>${r[k] ?? '—'}</td>`).join('')}</tr>`).join('')
+      }</tbody></table>`;
+    }
+
+    function showAgentApproval(proposal) {
+      agentPending = proposal;
+      const el = document.getElementById('agent-approval');
+      const inc = proposal.incident;
+      const tech = proposal.technician;
+      el.style.display = 'block';
+      el.innerHTML = `<div class="agent-approval">
+        <h4>⚠ Human approval required</h4>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 0.5rem">${proposal.reasoning}</p>
+        <div style="font-size:0.82rem">
+          <strong>${inc.incident_id}</strong> · ${inc.severity} · ${inc.title}<br>
+          → <strong>${tech.technician_name}</strong> (${tech.technician_id}) · ${tech.skill_level}
+        </div>
+        ${proposal.warning ? `<div class="agent-warn">${proposal.warning}</div>` : ''}
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem">
+          Writes: bridge_incident_technician · ${proposal.writes?.[1] || 'ops writeback'}
+        </div>
+        <div class="agent-approval-actions">
+          <button type="button" class="btn btn-primary" id="agent-approve-btn">✓ Approve dispatch</button>
+          <button type="button" class="btn" id="agent-reject-btn">Reject</button>
+        </div>
+      </div>`;
+      document.getElementById('agent-approve-btn').addEventListener('click', agentApprove);
+      document.getElementById('agent-reject-btn').addEventListener('click', () => {
+        agentPending = null;
+        el.style.display = 'none';
+        appendAgent('assistant', null, 'Proposal rejected — no writes performed.');
+      });
+    }
+
+    async function agentSearch(market, severity) {
+      appendAgent('user', null, `Search open ${severity || ''} incidents in ${market}`.trim());
+      const r = await fetch('/api/agent/search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market, severity }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Search failed');
+      agentContext.market = market;
+      if (d.items?.length) agentContext.incident_id = d.items[0].incident_id;
+      appendAgent('assistant', 'search_incidents', d.reasoning || d.summary);
+      renderAgentTable(d.items, ['incident_id','title','severity','status','market','service_type']);
+      return d;
+    }
+
+    async function agentRecommend(market) {
+      appendAgent('user', null, `Recommend a technician in ${market}`);
+      const r = await fetch('/api/agent/recommend', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Recommend failed');
+      if (d.recommended) agentContext.technician_id = d.recommended.technician_id;
+      appendAgent('assistant', 'recommend_technician', d.reasoning || d.summary);
+      renderAgentTable(d.items, ['technician_id','technician_name','market','skill_level','status']);
+      return d;
+    }
+
+    async function agentPropose(incidentId, technicianId) {
+      appendAgent('user', null, `Propose dispatch for ${incidentId} to ${technicianId}`);
+      const r = await fetch('/api/agent/propose', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incident_id: incidentId, technician_id: technicianId }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Propose failed');
+      appendAgent('assistant', 'assign_technician', d.reasoning + '<br><em>Awaiting human approval before write.</em>');
+      showAgentApproval(d);
+      return d;
+    }
+
+    async function agentApprove() {
+      if (!agentPending) return;
+      const { incident, technician } = agentPending;
+      const btn = document.getElementById('agent-approve-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Writing…'; }
+      try {
+        const r = await fetch('/api/agent/approve', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            incident_id: incident.incident_id,
+            technician_id: technician.technician_id,
+            ops_notes: `Agent dispatch approved — ${technician.technician_id}`,
+          }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Approve failed');
+        document.getElementById('agent-approval').style.display = 'none';
+        agentPending = null;
+        appendAgent('assistant', 'update_incident_status',
+          `<strong>Dispatch confirmed.</strong><br>${d.message}<br>Status → DISPATCHED · bridge → CONFIRMED`);
+        showToast('Dispatch approved — bridge + ops updated');
+        loadAgentAudit();
+      } catch (e) {
+        appendAgent('assistant', null, `<span class="error">${e.message}</span>`);
+        if (btn) { btn.disabled = false; btn.textContent = '✓ Approve dispatch'; }
+      }
+    }
+
+    async function loadAgentAudit() {
+      try {
+        const d = await (await fetch('/api/agent/audit')).json();
+        const el = document.getElementById('agent-audit');
+        const items = d.items || [];
+        if (!items.length) { el.innerHTML = '<div class="empty">No audit entries yet</div>'; return; }
+        el.innerHTML = `<table><thead><tr><th>Tool</th><th>Query</th><th>Result</th><th>When</th></tr></thead><tbody>${
+          items.map(r => `<tr><td><code>${r.tool_name}</code></td><td style="font-size:0.72rem">${(r.query_text||'').slice(0,40)}</td><td style="font-size:0.72rem">${(r.result_summary||'').slice(0,48)}</td><td style="font-size:0.72rem">${(r.created_at||'').slice(0,19)}</td></tr>`).join('')
+        }</tbody></table>`;
+      } catch (e) {
+        document.getElementById('agent-audit').innerHTML = '<div class="empty">Audit unavailable</div>';
+      }
+    }
+
+    async function runAgentDemo() {
+      const demoBtn = document.getElementById('agent-run-demo');
+      demoBtn.disabled = true;
+      try {
+        await agentSearch('DALLAS', 'P1');
+        await new Promise(r => setTimeout(r, 600));
+        await agentRecommend('DALLAS');
+        await new Promise(r => setTimeout(r, 600));
+        await agentPropose('INC-9001', 'TECH-201');
+      } catch (e) {
+        appendAgent('assistant', null, `<span class="error">${e.message}</span>`);
+      } finally {
+        demoBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('agent-run-demo').addEventListener('click', runAgentDemo);
+    document.querySelectorAll('[data-agent-step]').forEach(chip => {
+      chip.addEventListener('click', async () => {
+        try {
+          if (chip.dataset.agentStep === 'search') await agentSearch('DALLAS', 'P1');
+          else if (chip.dataset.agentStep === 'recommend') await agentRecommend(agentContext.market || 'DALLAS');
+          else if (chip.dataset.agentStep === 'propose') await agentPropose('INC-9001', 'TECH-201');
+        } catch (e) { appendAgent('assistant', null, `<span class="error">${e.message}</span>`); }
+      });
+    });
+
+    function renderCssChart(panel) {
+      const ds = panel.datasets?.[0];
+      if (!ds || !panel.labels?.length) return '';
+      const max = Math.max(...ds.data.map(v => Number(v) || 0), 1);
+      const title = panel.title ? `<div class="panel-title">${panel.title}</div>` : '';
+      if (panel.type === 'pie') {
+        const total = ds.data.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
+        const colors = ['#00a8e8','#ffb74d','#81c784','#ff5252','#9575cd','#4dd0e1','#f06292'];
+        let gradient = 'conic-gradient(';
+        let acc = 0;
+        panel.labels.forEach((label, i) => {
+          const pct = ((Number(ds.data[i]) || 0) / total) * 100;
+          gradient += `${colors[i % colors.length]} ${acc}% ${acc + pct}%${i < panel.labels.length - 1 ? ', ' : ''}`;
+          acc += pct;
+        });
+        gradient += ')';
+        const legend = panel.labels.map((label, i) =>
+          `<span style="display:inline-flex;align-items:center;gap:4px;margin:0 8px 6px 0;font-size:0.78rem"><span style="width:10px;height:10px;border-radius:2px;background:${colors[i % colors.length]}"></span>${label}: ${ds.data[i]}</span>`
+        ).join('');
+        return title + `<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap"><div style="width:140px;height:140px;border-radius:50%;background:${gradient}"></div><div>${legend}</div></div>`;
+      }
+      let bars = '<div class="bar-chart">';
+      panel.labels.forEach((label, i) => {
+        const v = Number(ds.data[i]) || 0;
+        const pct = Math.round((v / max) * 100);
+        bars += `<div class="bar-row"><span class="bar-label">${label}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-val">${v}</span></div>`;
+      });
+      bars += '</div>';
+      return title + bars;
+    }
+
+    function renderGenieTable(columns, rows) {
+      if (!columns?.length || !rows?.length) return '';
+      const head = columns.map(c => '<th>' + c + '</th>').join('');
+      const body = rows.map(r => '<tr>' + r.map(v => '<td>' + (v ?? '—') + '</td>').join('') + '</tr>').join('');
+      return '<div class="table-wrap" style="margin-top:0.5rem"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    }
+
+    function renderGeniePanel(panel) {
+      if (panel.type === 'kpi' && panel.items?.length) {
+        return '<div class="genie-kpi-grid">' + panel.items.map(k =>
+          `<div class="genie-kpi"><label>${k.label}</label><strong>${k.text ? k.value : Number(k.value).toLocaleString()}</strong></div>`
+        ).join('') + '</div>';
+      }
+      if (panel.type === 'table' || (panel.columns?.length && !panel.labels?.length)) {
+        return renderGenieTable(panel.columns, panel.rows);
+      }
+      if (['bar', 'line', 'pie'].includes(panel.type) && panel.labels?.length) {
+        return renderCssChart(panel);
+      }
+      if (panel.columns?.length && panel.rows?.length) {
+        return renderGenieTable(panel.columns, panel.rows);
+      }
+      return '<div class="empty">No chartable data</div>';
+    }
+
+    function renderGenieDashboard(d) {
+      const dash = document.getElementById('genie-dashboard');
+      let panels = d.dashboard?.panels || [];
+      if (!panels.length && d.columns?.length && d.rows?.length) {
+        panels = [{ type: 'table', columns: d.columns, rows: d.rows, sql: d.sql }];
+      }
+      if (!panels.length) {
+        dash.innerHTML = '<div class="empty">No data returned — Genie may have answered in text only.<br><span style="font-size:0.8rem">Try: "Compare open incidents across all markets"</span></div>';
+        return;
+      }
+      let html = '';
+      panels.forEach((p) => {
+        html += '<div style="margin-bottom:1.25rem">' + renderGeniePanel(p);
+        if (p.sql) html += '<div class="genie-sql">' + p.sql.replace(/</g,'&lt;') + '</div>';
+        html += '</div>';
+      });
+      dash.innerHTML = html;
+      if (d.latency_ms) {
+        const src = (d.datasets || []).map(x => x.source).filter(Boolean).join(', ') || 'genie';
+        document.getElementById('mlflow-status').innerHTML =
+          `Last query ${d.latency_ms}ms · ${panels.length} panel(s) · ${src}` +
+          (d.mlflow_run_id ? ` · run <code>${d.mlflow_run_id.slice(0,8)}</code>` : '') +
+          (d.mlflow_experiment_url ? ` · <a href="${d.mlflow_experiment_url}" target="_blank">MLflow</a>` : '');
+      }
+    }
+
+    async function loadMlflowStatus() {
+      try {
+        const d = await (await fetch('/api/mlflow/status')).json();
+        const el = document.getElementById('mlflow-status');
+        if (d.enabled) {
+          el.innerHTML = `Active · <a href="${d.experiment_url}" target="_blank">${d.experiment_name}</a>`;
+        } else {
+          el.textContent = 'MLflow unavailable in this environment';
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function appendGenie(role, html, meta) {
+      const chat = document.getElementById('genie-chat');
+      const w = document.createElement('div');
+      w.className = 'genie-msg' + (role === 'user' ? ' user' : '');
+      w.innerHTML = `<div class="genie-bubble">${html}</div>${meta?`<div class="genie-meta">${meta}</div>`:''}`;
+      chat.appendChild(w); chat.scrollTop = chat.scrollHeight;
+      return w;
+    }
+
+    async function askGenie(q) {
+      q = (q||'').trim(); if (!q) return;
+      appendGenie('user', q.replace(/</g,'&lt;'));
+      const loading = appendGenie('assistant', '<span class="loading-shimmer">Genie is generating dashboard…</span>');
+      document.getElementById('genie-dashboard').innerHTML = '<div class="loading-shimmer">Building charts…</div>';
+      try {
+        const r = await fetch('/api/genie/ask', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question:q, conversation_id: genieConversationId }) });
+        const d = await r.json();
+        loading.remove();
+        if (!r.ok || d.error) {
+          appendGenie('assistant', '<span class="error">' + (d.error||'Failed') + '</span>');
+          document.getElementById('genie-dashboard').innerHTML = '<div class="error empty">Query failed</div>';
+          return;
+        }
+        if (d.conversation_id) genieConversationId = d.conversation_id;
+        let html = (d.text||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+        if (!html) html = 'Dashboard updated → see panel on the right.';
+        appendGenie('assistant', html, (d.status ? 'Status: '+d.status : '') + (d.latency_ms ? ' · '+d.latency_ms+'ms' : ''));
+        renderGenieDashboard(d);
+      } catch (e) {
+        loading.remove();
+        appendGenie('assistant', '<span class="error">Genie unavailable</span>');
+      }
+    }
+
+    document.getElementById('genie-send').addEventListener('click', () => { const i=document.getElementById('genie-input'); askGenie(i.value); i.value=''; });
+    document.getElementById('genie-input').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('genie-send').click(); });
+    document.querySelectorAll('.chip[data-q]').forEach(c => c.addEventListener('click', () => askGenie(c.dataset.q)));
+
+    // Init
+    if (activeTab === 'dashboard') loadDashboard();
+    if (activeTab === 'dispatch') { loadKpis(); loadIncidents(); loadLatencyHistory(); }
+    initPathToggles();
+    if (activeTab === 'live') { loadLiveScenarios(); startLivePolling(); }
+    if (activeTab === 'genie') loadMlflowStatus();
+    if (activeTab === 'agent') loadAgentAudit();
+  </script>
+</body>
+</html>

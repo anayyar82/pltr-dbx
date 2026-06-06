@@ -1,0 +1,5 @@
+pyyaml>=6.0
+flask>=3.0
+# Optional for SDP Ops Console (wire to SQL warehouse / Lakebase):
+# databricks-sql-connector
+# psycopg2-binary
